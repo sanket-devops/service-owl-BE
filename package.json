@@ -1,0 +1,28 @@
+{
+  "name": "express",
+  "version": "4.17.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node -T app.ts",
+    "dev": "nodemon -T app.ts",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "fastify": "node ./fastify-server/server.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "boom": "^7.3.0",
+    "fastify": "^3.12.0",
+    "fastify-cors": "^5.2.0",
+    "fastify-swagger": "^4.3.1",
+    "mongoose": "^5.11.18",
+    "nodemailer": "^6.5.0",
+    "nodestorage": "^0.9.17",
+    "port-used": "^2.0.8"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.7"
+  },
+  "author": "",
+  "license": "ISC"
+}
