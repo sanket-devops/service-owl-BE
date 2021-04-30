@@ -41,11 +41,7 @@ const allServiceHost = async () => {
         let downCount = 0;
         for (let i = 0; i < item.port.length; i++) {
             let portObj = item.port[i];
-            let isUp = await portUsed.check({
-                port: item.port[i].port,
-                host: item.ipAddress,
-                timeout: 400,
-            });
+            let isUp = await portUsed.check({port: item.port[i].port, host: item.ipAddress, timeout: 3000});
             if (isUp === true) {
                 upCount++;
                 portObj.status = 'UP';
@@ -56,19 +52,10 @@ const allServiceHost = async () => {
         }
         await owlModel.findOneAndUpdate({_id: item._id}, {$set: {port: item.port}}).exec();
 
-        if (upCount === item.port.length) {
-            console.log('UP');
-            await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'UP'}}).exec();
-        } else if (downCount === item.port.length) {
-            console.log('DOWN');
-            await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'DOWN'}}).exec();
-            // } else if ((upCount && downCount) !== item.port.length) {
-        } else if (upCount !== item.port.length && downCount !== item.port.length) {
-            console.log('S_DOWN');
-            await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'S_DOWN'}}).exec();
-        }
+        if (upCount === item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'UP'}}).exec();
+        else if (downCount === item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'DOWN'}}).exec();
+        else if (upCount !== item.port.length && downCount !== item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'S_DOWN'}}).exec();
     }
-    console.log(`################`);
     await compareStatus();
 }
 // setTimeout(allServiceHost(), 10000);
@@ -159,9 +146,7 @@ async function compareStatus() {
     let res: Idashboard[] = JSON.parse(JSON.stringify(await owlModel.find({}).lean().exec()));
     let oldDashboard = localStorageData
     if (oldDashboard && oldDashboard.length) {
-        let downHosts: any;
-        let oldStorageObj: Idashboard[] = oldDashboard;
-        let oldStorageMap = getRowsMap(oldStorageObj, '_id');
+        let oldStorageMap = getRowsMap(oldDashboard, '_id');
         let changeFound = false;
         let downServices = [];
         for (let item of res) {
@@ -190,19 +175,13 @@ async function compareStatus() {
                 text: JSON.stringify(downServices, null, 4)
             };
 
-            transporter.sendMail(mailOptions, function(error, info){
-                if (error) {
-                    console.log(error);
-                } else {
-                    console.log('Email sent: ' + mailOptions.to, info.response);
-                }
+            transporter.sendMail(mailOptions, function (error, info) {
+                if (error) console.log(error);
+                else console.log('Email sent: ' + mailOptions.to, info.response);
             });
-            // console.log('Down services : ', JSON.stringify(downServices, null, 4));
         } else console.log('No change found');
         localStorageData = getDashboardToStore(res);
-    } else {
-        localStorageData = getDashboardToStore(res);
-    }
+    } else localStorageData = getDashboardToStore(res);
 }
 
 function comparePortsArrAndGetDownServices(oldPorts: IPort[], newPorts: IPort[]): IPort[] {
