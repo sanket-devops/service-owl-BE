@@ -1,5 +1,6 @@
 import {Idashboard, IPort} from './interfaces/Idashboard';
 import {EStatus} from './interfaces/enums/EStatus';
+import * as moment from 'moment';
 
 const fastify = require('fastify')({
     // logger: true
@@ -32,34 +33,66 @@ mongoose.connect(db, {
 
 app.listen(port, function () {
     console.log(`service-owl app listen at : http://${hostname}:${port}`)
-})
+});
+
+// async function checkStatus() {
+//     return new Promise<boolean>((resolve, reject) => {
+//         setTimeout(() => {
+//             resolve(true);
+//         }, 2000);
+//     });
+// }
 
 const allServiceHost = async () => {
+    let startDate = new Date().getTime();
     let allData = await owlModel.find({}).select('ipAddress port').exec();
-    for (let item of allData) {
-        let upCount = 0;
-        let downCount = 0;
-        for (let i = 0; i < item.port.length; i++) {
-            let portObj = item.port[i];
-            let isUp = await portUsed.check({port: item.port[i].port, host: item.ipAddress, timeout: 3000});
-            if (isUp === true) {
-                upCount++;
-                portObj.status = 'UP';
-            } else {
-                downCount++;
-                portObj.status = 'DOWN';
-            }
-        }
-        await owlModel.findOneAndUpdate({_id: item._id}, {$set: {port: item.port}}).exec();
+    let servicesPromiseArr: Promise<any>[] = [];
 
-        if (upCount === item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'UP'}}).exec();
-        else if (downCount === item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'DOWN'}}).exec();
-        else if (upCount !== item.port.length && downCount !== item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'S_DOWN'}}).exec();
+    // loop services
+    for (let item of allData) {
+        servicesPromiseArr.push(new Promise<void>(async (resolve, reject) => {
+            let upCount = 0;
+            let downCount = 0;
+
+            let portsPromiseArr: Promise<any>[] = [];
+            for (let i = 0; i < item.port.length; i++) {
+                portsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
+                    let portObj = item.port[i];
+                    let isUp;
+                    try {
+                        isUp = await portUsed.check({port: item.port[i].port, host: item.ipAddress, timeout: 3000});
+                    } catch (e) {
+                    }
+                    // isUp = await checkStatus();
+                    if (isUp === true) {
+                        upCount++;
+                        portObj.status = 'UP';
+                    } else {
+                        downCount++;
+                        portObj.status = 'DOWN';
+                    }
+                    resolve();
+                }));
+            }
+            await Promise.all(portsPromiseArr);
+            await owlModel.findOneAndUpdate({_id: item._id}, {$set: {port: item.port}}).exec();
+
+            if (upCount === item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'UP'}}).exec();
+            else if (downCount === item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'DOWN'}}).exec();
+            else if (upCount !== item.port.length && downCount !== item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'S_DOWN'}}).exec();
+            resolve();
+        }));
+
     }
+    await Promise.all(servicesPromiseArr);
     await compareStatus();
+
+    let endDate = new Date().getTime();
+    console.log(`${moment().format('DD-MM-YYYY hh:mm:ss A Z')} : Data Refreshed in ${(endDate - startDate) / 1000}`);
 }
 // setTimeout(allServiceHost(), 10000);
 setInterval(allServiceHost, 60000);
+allServiceHost();
 
 
 app.get('/', (req, res) => {
