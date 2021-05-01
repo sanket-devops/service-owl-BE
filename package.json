@@ -12,6 +12,7 @@
   "dependencies": {
     "body-parser": "^1.19.0",
     "boom": "^7.3.0",
+    "crypto-js": "^4.0.0",
     "fastify": "^3.12.0",
     "fastify-cors": "^5.2.0",
     "fastify-swagger": "^4.3.1",
@@ -22,6 +23,7 @@
     "port-used": "^2.0.8"
   },
   "devDependencies": {
+    "@types/crypto-js": "^4.0.1",
     "nodemon": "^2.0.7"
   },
   "author": "",

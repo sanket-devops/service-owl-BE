@@ -2,6 +2,9 @@ import {Idashboard, IPort} from './interfaces/Idashboard';
 import {EStatus} from './interfaces/enums/EStatus';
 import * as moment from 'moment';
 
+const CryptoJS = require('crypto-js');
+let k = `j@mesbond`; // j@mesbond
+
 const fastify = require('fastify')({
     // logger: true
 })
@@ -42,6 +45,17 @@ app.listen(port, function () {
 //         }, 2000);
 //     });
 // }
+
+function getEncryptedData(data: any) {
+    let encryptMe;
+    if (typeof data === 'object') encryptMe = JSON.stringify(data);
+    return CryptoJS.AES.encrypt(encryptMe, k).toString();
+}
+
+function getDecryptedData(ciphertext: any) {
+    let bytes = CryptoJS.AES.decrypt(ciphertext, k);
+    return bytes.toString(CryptoJS.enc.Utf8);
+}
 
 const allServiceHost = async () => {
     let startDate = new Date().getTime();
@@ -96,18 +110,13 @@ allServiceHost();
 
 
 app.get('/', (req, res) => {
-    // console.log(`service-owl is up and running...`)
-    res.send(`service-owl is up and running...`)
-    // res.type(`${__dirname}/index.html`)
-    // throw boom.boomify(Error)
+    res.send(`service-owl is up and running...`);
 })
-
-//get
 
 app.get('/hosts', async (req, res) => {
     try {
         let hosts = await owlModel.find({});
-        res.send(hosts);
+        res.send({data: getEncryptedData(hosts)});
     } catch (e) {
         res.status(500);
     }
@@ -123,9 +132,10 @@ app.get('/hosts/latestPull', async (req, res) => {
 });
 
 //post
-app.post('/hosts', async (req, res) => {
+app.post('/hosts/host-save', async (req, res) => {
     try {
-        let saved = await owlModel.create(req.body);
+        let tempData = JSON.parse(getDecryptedData(req.body.data));
+        let saved = await owlModel.create(tempData);
         res.send(saved);
     } catch (e) {
         console.log(e);
@@ -145,26 +155,22 @@ app.get('/hosts/:postId', async (req, res) => {
 });
 
 //update
-app.put('/hosts/:postId', async (req, res) => {
+app.put('/hosts/update', async (req, res) => {
     try {
-        let post = await owlModel.findByIdAndUpdate({
-            _id: req.params.postId
-        }, req.body, {
-            new: true,
-            runValidator: true
-        });
+        let tempData = JSON.parse(getDecryptedData(req.body.data));
+        let id = getDecryptedData(req.body.id);
+        let post = await owlModel.findByIdAndUpdate({_id: id}, tempData, {new: true, runValidator: true});
         res.send(post);
     } catch (e) {
         res.status(500);
     }
 });
 
-
 //delete
-app.delete('/hosts/:postId', async (req, res) => {
+app.post('/hosts/host-delete', async (req, res) => {
     try {
         let post = await owlModel.findByIdAndRemove({
-            _id: req.params.postId
+            _id: getDecryptedData(req.body.data)
         });
         res.send(post);
     } catch (e) {
@@ -184,6 +190,7 @@ async function compareStatus() {
         let downServices = [];
         for (let item of res) {
             let oldItem: Idashboard = oldStorageMap[item._id];
+            if (!oldItem) continue;
             let downPortsList: IPort[] = comparePortsArrAndGetDownServices(oldItem.port, item.port);
             if (downPortsList.length) {
                 changeFound = true;
