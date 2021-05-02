@@ -21,7 +21,7 @@ const bodyParser = require('body-parser');
 const hostname = '0.0.0.0';
 const port = 8002;
 let owlModel = require('./owl.model');
-let db = 'mongodb://127.0.0.1:27017/service-owl';
+let db = 'mongodb://192.168.130.70:27017/service-owl';
 let allData = [];
 let nodemailer = require('nodemailer');
 // const fs = require('fs')
@@ -31,7 +31,7 @@ mongoose.connect(db, {
     promiseLibrary: Promise,
     useNewUrlParser: true,
     useUnifiedTopology: true,
-}).then(() => console.log(`MongoDB Connected: ${db}`));
+}).then(() => console.log(`MongoDB Connected: ${db}`)).catch(console.error);
 
 
 app.listen(port, function () {
