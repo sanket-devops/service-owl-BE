@@ -34,7 +34,7 @@ mongoose.connect(db, {
 }).then(() => console.log(`MongoDB Connected: ${db}`)).catch(console.error);
 
 
-app.listen(port, function () {
+app.listen(port, '0.0.0.0', function () {
     console.log(`service-owl app listen at : http://${hostname}:${port}`)
 });
 
