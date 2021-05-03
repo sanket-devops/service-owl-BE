@@ -105,7 +105,7 @@ const allServiceHost = async () => {
     console.log(`${moment().format('DD-MM-YYYY hh:mm:ss A Z')} : Data Refreshed in ${(endDate - startDate) / 1000}`);
 }
 // setTimeout(allServiceHost(), 10000);
-setInterval(allServiceHost, 300000);
+setInterval(allServiceHost, 60000);
 allServiceHost();
 
 
