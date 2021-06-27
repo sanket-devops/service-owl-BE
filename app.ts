@@ -13,7 +13,7 @@ let app = fastify;
 app.register(require('fastify-cors'), {
     // put your options here
 });
-const portUsed = require('port-used');
+const tcpPortUsed = require('tcp-port-used');
 const mongoose = require('mongoose');
 mongoose.set('useFindAndModify', false);
 const boom = require('boom');
@@ -22,9 +22,10 @@ const hostname = '0.0.0.0';
 const port = 8002;
 let owlModel = require('./owl.model');
 let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.130.70:27017/service-owl?authSource=admin';
+// let db = 'mongodb://localhost:27017/service-owl?authSource=admin';
 let allData = [];
 let nodemailer = require('nodemailer');
-// const fs = require('fs')
+
 mongoose.Promise = global.Promise;
 
 mongoose.connect(db, {
@@ -38,14 +39,6 @@ app.listen(port, '0.0.0.0', function () {
     console.log(`service-owl app listen at : http://${hostname}:${port}`)
 });
 
-// async function checkStatus() {
-//     return new Promise<boolean>((resolve, reject) => {
-//         setTimeout(() => {
-//             resolve(true);
-//         }, 2000);
-//     });
-// }
-
 function getEncryptedData(data: any) {
     let encryptMe;
     if (typeof data === 'object') encryptMe = JSON.stringify(data);
@@ -57,9 +50,12 @@ function getDecryptedData(ciphertext: any) {
     return bytes.toString(CryptoJS.enc.Utf8);
 }
 
+let counter = 1;
 const allServiceHost = async () => {
+    console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Start =>`, counter,`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
     let startDate = new Date().getTime();
-    let allData = await owlModel.find({}).select('ipAddress port').exec();
+    let allData: Idashboard[] = <any>await owlModel.find({}).select('ipAddress port').lean().exec();
+    allData = JSON.parse(JSON.stringify(allData));
     let servicesPromiseArr: Promise<any>[] = [];
 
     // loop services
@@ -74,7 +70,7 @@ const allServiceHost = async () => {
                     let portObj = item.port[i];
                     let isUp;
                     try {
-                        isUp = await portUsed.check({port: item.port[i].port, host: item.ipAddress, timeout: 3000});
+                        isUp = await tcpPortUsed.check(portObj.port, item.ipAddress);
                     } catch (e) {
                     }
                     // isUp = await checkStatus();
@@ -82,8 +78,17 @@ const allServiceHost = async () => {
                         upCount++;
                         portObj.status = 'UP';
                     } else {
-                        downCount++;
-                        portObj.status = 'DOWN';
+                        try {
+                            console.log(`Watching '${item.ipAddress}' Port '${portObj.port}'.`);
+                            await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 20000, 60000 * 4); // wait for 5 minute to
+                            console.log(`Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                            upCount++;
+                            portObj.status = 'UP';
+                        } catch (e) {
+                            console.log(`Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                            downCount++;
+                            portObj.status = 'DOWN';
+                        }
                     }
                     resolve();
                 }));
@@ -103,9 +108,10 @@ const allServiceHost = async () => {
 
     let endDate = new Date().getTime();
     console.log(`${moment().format('DD-MM-YYYY hh:mm:ss A Z')} : Data Refreshed in ${(endDate - startDate) / 1000}`);
+    console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Stop =>`, counter++,`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
 }
 // setTimeout(allServiceHost(), 10000);
-setInterval(allServiceHost, 300000);
+setInterval(allServiceHost, 60000 * 5);
 allServiceHost();
 
 
@@ -122,14 +128,14 @@ app.get('/hosts', async (req, res) => {
     }
 });
 
-app.get('/hosts/latestPull', async (req, res) => {
-    try {
-        let latestPull = allServiceHost();
-        res.send(latestPull);
-    } catch (e) {
-        res.status(500);
-    }
-});
+// app.get('/hosts/latestPull', async (req, res) => {
+//     try {
+//         let latestPull = allServiceHost();
+//         res.send(latestPull);
+//     } catch (e) {
+//         res.status(500);
+//     }
+// });
 
 //post
 app.post('/hosts/host-save', async (req, res) => {

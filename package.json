@@ -20,7 +20,7 @@
     "mongoose": "^5.11.18",
     "nodemailer": "^6.5.0",
     "nodestorage": "^0.9.17",
-    "port-used": "^2.0.8",
+    "tcp-port-used": "^1.0.2",
     "ts-node": "^9.1.1"
   },
   "devDependencies": {
