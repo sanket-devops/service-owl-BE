@@ -21,7 +21,7 @@ const bodyParser = require('body-parser');
 const hostname = '0.0.0.0';
 const port = 8002;
 let owlModel = require('./owl.model');
-let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.130.70:27017/service-owl?authSource=admin';
+let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.120.135:27017/service-owl?authSource=admin';
 // let db = 'mongodb://localhost:27017/service-owl?authSource=admin';
 let allData = [];
 let nodemailer = require('nodemailer');
