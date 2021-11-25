@@ -54,54 +54,57 @@ let counter = 1;
 const allServiceHost = async () => {
     console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Start =>`, counter,`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
     let startDate = new Date().getTime();
-    let allData: Idashboard[] = <any>await owlModel.find({}).select('ipAddress port').lean().exec();
+    let allData: Idashboard[] = <any>await owlModel.find({}).select('ipAddress hostName port hostCheck').lean().exec();
     allData = JSON.parse(JSON.stringify(allData));
     let servicesPromiseArr: Promise<any>[] = [];
 
     // loop services
     for (let item of allData) {
-        servicesPromiseArr.push(new Promise<void>(async (resolve, reject) => {
-            let upCount = 0;
-            let downCount = 0;
+        if (item.hostCheck === true) {
+            servicesPromiseArr.push(new Promise<void>(async (resolve, reject) => {
+                let upCount = 0;
 
-            let portsPromiseArr: Promise<any>[] = [];
-            for (let i = 0; i < item.port.length; i++) {
-                portsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
-                    let portObj = item.port[i];
-                    let isUp;
-                    try {
-                        isUp = await tcpPortUsed.check(portObj.port, item.ipAddress);
-                    } catch (e) {
-                    }
-                    // isUp = await checkStatus();
-                    if (isUp === true) {
-                        upCount++;
-                        portObj.status = 'UP';
-                    } else {
+                let downCount = 0;
+                let portsPromiseArr: Promise<any>[] = [];
+                for (let i = 0; i < item.port.length; i++) {
+                    portsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
+                        let portObj = item.port[i];
+                        let isUp;
                         try {
-                            console.log(`Watching '${item.ipAddress}' Port '${portObj.port}'.`);
-                            await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 20000, 60000 * 4); // wait for 5 minute to
-                            console.log(`Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                            isUp = await tcpPortUsed.check(portObj.port, item.ipAddress);
+                        } catch (e) {
+                        }
+                        // isUp = await checkStatus();
+                        if (isUp === true) {
                             upCount++;
                             portObj.status = 'UP';
-                        } catch (e) {
-                            console.log(`Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                            downCount++;
-                            portObj.status = 'DOWN';
+                        } else {
+                            try {
+                                console.log(`Watching '${item.ipAddress}' Port '${portObj.port}'.`);
+                                await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 20000, 60000 * 4); // wait for 5 minute to
+                                console.log(`Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                upCount++;
+                                portObj.status = 'UP';
+                            } catch (e) {
+                                console.log(`Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                downCount++;
+                                portObj.status = 'DOWN';
+                            }
                         }
-                    }
-                    resolve();
-                }));
-            }
-            await Promise.all(portsPromiseArr);
-            await owlModel.findOneAndUpdate({_id: item._id}, {$set: {port: item.port}}).exec();
+                        resolve();
+                    }));
+                }
+                await Promise.all(portsPromiseArr);
+                await owlModel.findOneAndUpdate({_id: item._id}, {$set: {port: item.port}}).exec();
 
-            if (upCount === item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'UP'}}).exec();
-            else if (downCount === item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'DOWN'}}).exec();
-            else if (upCount !== item.port.length && downCount !== item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'S_DOWN'}}).exec();
-            resolve();
-        }));
-
+                if (upCount === item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'UP'}}).exec();
+                else if (downCount === item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'DOWN'}}).exec();
+                else if (upCount !== item.port.length && downCount !== item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'S_DOWN'}}).exec();
+                resolve();
+            }));
+        }else {
+            console.log(`Skip Host '${item.hostName}' '${item.ipAddress}' HostCheck is '${item.hostCheck}'.`);
+        }
     }
     await Promise.all(servicesPromiseArr);
     await compareStatus();
