@@ -71,7 +71,7 @@ const allServiceHost = async () => {
                         let portObj = item.port[i];
                         let isUp;
                         try {
-                            isUp = await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress);
+                            isUp = await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 2000, 10000);
                         } catch (e) {
                         }
                         // isUp = await checkStatus();
