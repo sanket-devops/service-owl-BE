@@ -81,7 +81,7 @@ const allServiceHost = async () => {
                         } else {
                             try {
                                 console.log(`Watching '${item.ipAddress}' Port '${portObj.port}'.`);
-                                await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 20000, 60000 * 4); // wait for 5 minute to
+                                await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 10000, 60000 * 4); // wait for 5 minute to
                                 console.log(`Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
                                 upCount++;
                                 portObj.status = 'UP';
