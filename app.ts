@@ -209,24 +209,59 @@ async function compareStatus() {
             }
         }
         if (changeFound) {
-            let transporter = nodemailer.createTransport({
-                service: 'gmail',
-                auth: {
-                    user: 'spatel.devops@gmail.com',
-                    pass: 'Operr123'
-                }
-            });
+            async function main() {
+                // Create a SMTP transporter object
+                let transporter = nodemailer.createTransport({
+                    host: "192.168.130.80",
+                    port: 587,
+                    secure: false,
+                    auth: {
+                        user: 'spatel@operrparking.com',
+                        pass: '123@Soon'
+                    },
+                    tls: { 
+                        rejectUnauthorized: false 
+                    },
+                    dkim: {
+                        domainName: "operrparking.com",
+                        keySelector: "dkim",
+                        privateKey: '"-----BEGIN RSA PRIVATE KEY-----","MIIEogIBAAKCAQEAxp\/KVTc+tJKt+I2Zrh+tBUeBMfIRTIwGCj2nKi5xzMsphWGQ","fJAg6luD9VUGTx4l304yGF\/5saKgTi8wLJrM7jNrm3a+J8lBpsYDvaxL\/77k4WW3","E9TYBnPgzN3K39cfce+pFOPgOC2FZkwsiiAvE9acV28soHh6H0TEvfcLVYIkP8Np","bQ2adXekMfcnJcAOvnue1aycyWjBNOwCippDVkScdV9Kl3vhZamc1Wa2IncStE6L","v9BNYR5lShZCNODogSzq3rQWBojpSKxQaoGVE5hmMzNl4nkaSo1oK4DX7uW0BTVN","vQQ1alPJBRzvMQ4Ua\/r\/fFnq+oeux42P\/PRGewIDAQABAoIBAF1GwyU7uXXhgFO+","Y9Jyy7Uz\/EcxT9Br3ZZHl85mW0j6i7g4tjrZEKweaBz5Xeof1VdGCJ6Ly94Q6klt","Palk1SJ0AW\/T1r8mc29XhIA5fsNOqXv0YYKtrPlyx7pN2i0+gGToULYfwbeAISqG","UVBYhuNBINCqxAFkMq2mhOJVNvxjOsmVa3sOw2QBjfsFBE4SWwprwOqQYMIGrHYC","nlB0Mt7KNNjhR0LMnITA60sCADxHZsSsh0PH2VfyR2eMJK2jN6nRge44WaYjWJe4","ZQK5UiRp2s3rzoE3XBtsAGArVhGJ2Fhe78kEdmFfAEuzn\/F24sWcaqcjRh0+fwws","4glqsikCgYEA4cTyuwccf1uJ+6bvKbKxhGpHQLA4Oego0k4FPrpYWXtLKmPl+rcz","0Xz9rbZs02mBltyXGistCdnhAxFR\/389Cd31ouk1gzg8HOr09YF5P744ZW3YGC8N","DTfJHh7N49inCdMeP8bGABNPksigbNU2GMCGWZdoiRVrJnIg2MagEV0CgYEA4ThY","WHyqDxeXayK1SE9PLYUIR7O0dNOYsqIR9QFFRW9\/iHv5p\/IELVfHSo9ugkYsx+A9","bc09d+ICAfGJMXwn7jM2yLsKzldhB5joESVq8XIwMJ4Kip74MDffO4zScWwLbXLA","RcigJfhFvBcjwHnhi\/TLArWKMD25rADqVtJogbcCgYBjqG1BE52Htl+NPx35ORDV","E5jKPD9FiG5kjt4P12\/iZ+NBHgHJjw8HnPXZtVoKZFs4vbzRZ1elLpD9qqqYbpEC","BwFD3U+q0arvVOO2b2WXNp9sXnVyD2rid8qGSjC2L89kLdX\/bv290MhiUb9G60LK","4EktyQDy6gp3WQ+YwOytXQKBgAXzu0H7aXMkqHfIXwoeLnWBgoqCkU5VGT\/\/UIIt","GmuPWst8m0h4+OtJ2pZ52+3NdPmDT5xLREiazHrIq1uHcHa3G8eKSerSHFpbDCcH","2h+vaN6gDp9DPEPp9hhYzGb6+AJYegReHP1j5lPmOKepkPBl88eKjLBhsTp+e7L3","tJNZAoGAHbuHB3C0AfoZrT39JPcI+GtM72lPIsiIJqBwIeUAJz7PAiI\/Gv+sMAn\/","l6Riqa+Cx6lAIsXNJQEzNfUVgAt5XutxnokDuwiCRZgmhOSfXmQ2t6359XgERwNC","5lfKsqhl02NJPIWE7Id6iRqQHs6BGX3XJ105RfggRbSmpl0f\/a8=","-----END RSA PRIVATE KEY-----"'
+                    }
+                });
+            
+                // Message object
+                let message = {
+                    from: 'ServiceOwl <spatel@operrparking.com>',
+            
+                    // Comma separated list of recipients
+                    to: 'spatel.devops@gmail.com',
 
-            let mailOptions = {
-                from: 'spatel.devops@gmail.com',
-                to: 'spatel.devops@gmail.com',
-                subject: 'Service is down, Please check the mail for more details.',
-                text: JSON.stringify(downServices, null, 4)
-            };
-
-            transporter.sendMail(mailOptions, function (error, info) {
-                if (error) console.log(error);
-                else console.log('Email sent: ' + mailOptions.to, info.response);
+                    // bcc: 'andris@ethereal.email',
+            
+                    // Subject of the message
+                    subject: 'Service is down, Please check the mail for more details.',
+            
+                    // plaintext body
+                    text: JSON.stringify(downServices, null, 4),
+            
+                    // HTML body
+                    // html:
+                    //     '<p><b>Hello</b> to myself <img src="cid:note@example.com"/></p>' +
+                    //     '<p>Here\'s a nyan cat for you as an embedded attachment:<br/><img src="cid:nyan@example.com"/></p>',
+            
+                    // An array of attachments
+                    attachments: [
+                        // String attachment
+                    ]
+                };
+            
+                let info = await transporter.sendMail(message);
+                console.log('Message sent successfully as %s', info.messageId);
+            }
+            
+            main().catch(err => {
+                console.error(err.message);
+                process.exit(1);
             });
         } else console.log('No change found');
         localStorageData = getDashboardToStore(res);
