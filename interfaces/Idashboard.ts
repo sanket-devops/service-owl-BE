@@ -18,6 +18,10 @@ export interface IPort {
   name: string;
   port: number;
   status: string;
+  http: Boolean;
+  path: string; 
+  method: string;
+  statuscode: number;
 }
 
 

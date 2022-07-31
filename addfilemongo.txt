@@ -1,0 +1,16 @@
+/* https://mongoplayground.net/p/vSMFmBQOIrG */
+/* add file http: true, path: '/', method: 'GET' */
+
+const collection = 'service-hosts';
+
+db.getCollection(collection).find({}).forEach((it) => {
+    let ports = it.port || [];
+    for(let port of ports) {
+        port.http = true;
+        port.path = '/';
+        port.method = 'GET';
+        port.statuscode = 200;
+    }
+    
+    db.getCollection(collection).updateOne({ _id: it._id }, { $set: it });
+});

@@ -7,7 +7,7 @@ const OwlSchema = new Schema({
     hostCheck: Boolean,
     hostName: String,
     ipAddress: String,
-    port: [{name: String, port: Number, status: String}],
+    port: [{name: String, port: Number, status: String, http: Boolean, path: String, method: String, statuscode: Number}],
     linkTo: [{hostName: String, ipAddress: String, port: Number}],
     groupName: String,
     clusterName: String,
