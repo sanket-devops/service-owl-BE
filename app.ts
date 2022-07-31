@@ -109,40 +109,38 @@ const allServiceHost = async () => {
                         } else {
                             try {
                                 console.log(`Watching '${item.ipAddress}' Port '${portObj.port}'.`);
-                                await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 10000, 60000 * 4) // wait for 5 minute to
-                                // if (portObj.http === true) {
-                                //     let req = http.request(httpCheck, res => {
-                                //         if (portObj.statuscode === res.statusCode) {
-                                //             // console.log("Service up")
-                                //             console.log(`Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                                //             upCount++;
-                                //             portObj.status = 'UP';
-                                            
-                                //         }
-                                //             console.log(`statusCode: ${res.statusCode}`);
-                                          
-                                //             // res.on('data', d => {
-                                //             //   process.stdout.write(d);
-                                //             // });
-                                //           });
-                                          
-                                //           req.on('error', error => {
-                                //             console.error(`Error Http Requst => Hostname: ${error.address} Port: ${error.port}`);
-                                //           });
-                                          
-                                //           req.end();
-
-                                //     // console.log(portObj);
-                                // }
+                                await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 10000, 10000 * 4); // wait for 5 minute to
                                 // await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 10000, 60000 * 4); // wait for 5 minute to
-                                console.log(`Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                console.log(`Port Checker: Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
                                 upCount++;
                                 portObj.status = 'UP';
                             } catch (e) {
-                                console.log(`Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                                downCount++;
-                                portObj.status = 'DOWN';
-                            }
+                                    console.log(`Port Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                    downCount++;
+                                    portObj.status = 'DOWN';
+                                        if (portObj.http === true) {
+                                            let req = http.request(httpCheck, res => {
+                                                console.log(`prodObjstatuscode: ${portObj.statuscode} == statusCode: ${res.statusCode}`);
+                                                if (portObj.statuscode === res.statusCode) {
+                                                    // console.log(`statusCode: ${res.statusCode}`);
+                                                    console.log(`Http Checker: Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                                    upCount++;
+                                                    portObj.status = 'UP';
+                                                    // res.on('data', d => {
+                                                    //   process.stdout.write(d);
+                                                    // });
+                                                }
+                                            });
+                                            req.on('error', error => {
+                                                // console.error(`Error Http Requst => Hostname: ${error.address} Port: ${error.port}`);
+                                                console.log(`Http Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                                downCount++;
+                                                portObj.status = 'DOWN';
+                                                console.log("-----------------------------***-----------------------------");
+                                            });
+                                            req.end();
+                                        }
+                            }      
                         }
                         resolve();
                     }));
