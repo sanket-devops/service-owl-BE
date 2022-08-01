@@ -61,31 +61,23 @@ const allServiceHost = async () => {
     allData = JSON.parse(JSON.stringify(allData));
     let servicesPromiseArr: Promise<any>[] = [];
     ////////////////////////// HTTP Response Cheker ////////////////////////////////
-    let options = {
-        hostname: '192.168.130.183',
-        port: 80,
-        path: '/',
-        method: 'GET',
-      };
-      var statusC: number = 0;
-      let req = await http.request(options, res => {
-        // console.log(`statusCode: ${res.statusCode}`);
-        statusC = res.statusCode;
-      
-        // res.on('data', d => {
-        //   process.stdout.write(d);
-        // });
-        return res.statusCode;
-    });
-    console.log(`Statuscode: '${statusC}'`);
-    console.log(`Statuscode: '${req()}'`);
-
-      
-      req.on('error', error => {
-        console.error(`Error Http Requst => Hostname: ${error.address} Port: ${error.port}`);
-      });
-      
-      req.end();
+    // let options = {
+    //     hostname: '192.168.130.183',
+    //     port: 80,
+    //     path: '/',
+    //     method: 'GET',
+    //   };
+    //   let req = await http.request(options, res => {
+    //     // console.log(`statusCode: ${res.statusCode}`);
+    //     // res.on('data', d => {
+    //     //   process.stdout.write(d);
+    //     // });
+    //     return res.statusCode;
+    // });
+    //   req.on('error', error => {
+    //     console.error(`Error Http Requst => Hostname: ${error.address} Port: ${error.port}`);
+    //   });
+    //   req.end();
 ////////////////////////////////////////////////////////////
     // loop services
     for (let item of allData) {
@@ -105,6 +97,12 @@ const allServiceHost = async () => {
                             path: portObj.path,
                             method: portObj.method,
                           };
+                        // let httpCheck = {
+                        //     hostname: '192.168.130.183',
+                        //     port: 80,
+                        //     path: '/',
+                        //     method: 'GET',
+                        //   };
                         try {
                             isUp = await tcpPortUsed.check(portObj.port, item.ipAddress);
                         } catch (e) {
@@ -125,31 +123,30 @@ const allServiceHost = async () => {
                                     console.log(`Port Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
                                     downCount++;
                                     portObj.status = 'DOWN';
-                                    // if (portObj.http === true) {
-                                    //     let req = await http.request(httpCheck, res => {
-                                    //         console.log(res.statusCode);
-                                    //         console.log(`prodObjstatuscode: ${portObj.statuscode} == statusCode: ${res.statusCode}`);
-                                    //     });
-                                    //     if (portObj.statuscode === req.statusCode) {
-                                    //         // console.log(`statusCode: ${res.statusCode}`);
-                                    //         console.log(`Http Checker: Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                                    //         upCount++;
-                                    //         portObj.status = 'UP';
-                                    //         // res.on('data', d => {
-                                    //         //   process.stdout.write(d);
-                                    //         // });
-                                    //     } else {
-                                    //         console.log(`Statuscode '${req.statusCode}' isn't matched: '${item.ipAddress}' Port '${portObj.port}'.`);
-                                    //     };
-                                    //     await req.on('error', error => {
-                                    //         console.log(`Http Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                                    //         downCount++;
-                                    //         portObj.status = 'DOWN';
-                                    //         req.end();
-                                    //         console.log("-----------------------------***-----------------------------");
-                                    //     });
-                                        
-                                    // }
+
+                                    if (portObj.http) {
+                                        let req = http.request(httpCheck, res => {
+                                            if (portObj.statuscode === res.statusCode) {
+                                                // console.log(`statusCode: ${res.statusCode}`);
+                                                console.log(`Http Checker: Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                                upCount++;
+                                                portObj.status = 'UP';
+                                                // res.on('data', d => {
+                                                //   process.stdout.write(d);
+                                                // });
+                                            } else {
+                                                console.log(`Statuscode '${res.statusCode}' isn't matched: '${item.ipAddress}' Port '${portObj.port}'.`);
+                                            };
+                                        });
+                                        req.on('error', error => {
+                                            console.error(error);
+                                            console.log(`Http Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                            downCount++;
+                                            portObj.status = 'DOWN';
+                                            console.log("-----------------------------***-----------------------------");
+                                        });
+                                        req.end();
+                                    }
                             }      
                         }
                         resolve();
