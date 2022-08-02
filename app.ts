@@ -60,13 +60,14 @@ const allServiceHost = async () => {
     let allData: Idashboard[] = <any>await owlModel.find({}).select('ipAddress hostName port hostCheck').lean().exec();
     allData = JSON.parse(JSON.stringify(allData));
     let servicesPromiseArr: Promise<any>[] = [];
-    ////////////////////////// HTTP Response Cheker ////////////////////////////////
+////////////////////////// HTTP Response Cheker ////////////////////////////////
     // let options = {
     //     hostname: '192.168.130.183',
     //     port: 80,
     //     path: '/',
     //     method: 'GET',
     //   };
+
     //   let req = await http.request(options, res => {
     //     // console.log(`statusCode: ${res.statusCode}`);
     //     // res.on('data', d => {
@@ -74,9 +75,11 @@ const allServiceHost = async () => {
     //     // });
     //     return res.statusCode;
     // });
+
     //   req.on('error', error => {
     //     console.error(`Error Http Requst => Hostname: ${error.address} Port: ${error.port}`);
     //   });
+    
     //   req.end();
 ////////////////////////////////////////////////////////////
     // loop services
@@ -99,7 +102,7 @@ const allServiceHost = async () => {
                           };
                         // let httpCheck = {
                         //     hostname: '192.168.130.183',
-                        //     port: 80,
+                        //     port: 8888,
                         //     path: '/',
                         //     method: 'GET',
                         //   };
@@ -126,20 +129,23 @@ const allServiceHost = async () => {
 
                                     if (portObj.http) {
                                         let req = http.request(httpCheck, res => {
-                                            if (portObj.statuscode === res.statusCode) {
-                                                // console.log(`statusCode: ${res.statusCode}`);
-                                                console.log(`Http Checker: Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                            if (res.statusCode === portObj.statuscode) {
+                                                console.log(`Http Checker: Up Found '${httpCheck.hostname}' Port '${httpCheck.port}'.`);
+                                                // console.log(`Http Checker: Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
                                                 upCount++;
                                                 portObj.status = 'UP';
                                                 // res.on('data', d => {
                                                 //   process.stdout.write(d);
                                                 // });
                                             } else {
-                                                console.log(`Statuscode '${res.statusCode}' isn't matched: '${item.ipAddress}' Port '${portObj.port}'.`);
+                                                console.log(`Res Statuscode isn't matched '${res.statusCode}' = '${portObj.statuscode}' => '${item.ipAddress}' Port '${portObj.port}'.`);
                                             };
                                         });
                                         req.on('error', error => {
-                                            console.error(error);
+                                            if (error) {
+                                                console.error(error);
+                                                console.error(`Error Http Requst => Hostname: ${error.address} Port: ${error.port}`);
+                                            }
                                             console.log(`Http Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
                                             downCount++;
                                             portObj.status = 'DOWN';
