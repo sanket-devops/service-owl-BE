@@ -79,7 +79,7 @@ const allServiceHost = async () => {
     //   req.on('error', error => {
     //     console.error(`Error Http Requst => Hostname: ${error.address} Port: ${error.port}`);
     //   });
-    
+
     //   req.end();
 ////////////////////////////////////////////////////////////
     // loop services
@@ -123,36 +123,37 @@ const allServiceHost = async () => {
                                 upCount++;
                                 portObj.status = 'UP';
                             } catch (e) {
-                                    console.log(`Port Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                                    downCount++;
-                                    portObj.status = 'DOWN';
-
-                                    if (portObj.http) {
-                                        let req = http.request(httpCheck, res => {
-                                            if (res.statusCode === portObj.statuscode) {
-                                                console.log(`Http Checker: Up Found '${httpCheck.hostname}' Port '${httpCheck.port}'.`);
-                                                // console.log(`Http Checker: Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                                                upCount++;
-                                                portObj.status = 'UP';
-                                                // res.on('data', d => {
-                                                //   process.stdout.write(d);
-                                                // });
-                                            } else {
-                                                console.log(`Res Statuscode isn't matched '${res.statusCode}' = '${portObj.statuscode}' => '${item.ipAddress}' Port '${portObj.port}'.`);
-                                            };
-                                        });
-                                        req.on('error', error => {
-                                            if (error) {
-                                                console.error(error);
-                                                console.error(`Error Http Requst => Hostname: ${error.address} Port: ${error.port}`);
-                                            }
-                                            console.log(`Http Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                                            downCount++;
-                                            portObj.status = 'DOWN';
-                                            console.log("-----------------------------***-----------------------------");
-                                        });
-                                        req.end();
-                                    }
+                                console.log(`Port Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                downCount++;
+                                portObj.status = 'DOWN';
+                                if (portObj.http) {
+                                    let req = http.request(httpCheck, res => {
+                                        if (res.statusCode === portObj.statuscode) {
+                                            console.log(`Http Checker: Up Found '${httpCheck.hostname}' Port '${httpCheck.port}'.`);
+                                            // console.log(`Http Checker: Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                            upCount++;
+                                            portObj.status = 'UP';
+                                            // res.on('data', d => {
+                                            //   process.stdout.write(d);
+                                            // });
+                                        } else {
+                                            console.log(`Res Statuscode isn't matched '${res.statusCode}' = '${portObj.statuscode}' => '${item.ipAddress}' Port '${portObj.port}'.`);
+                                        };
+                                    });
+                                    req.on('error', error => {
+                                        if (error) {
+                                            // console.error(error);
+                                            console.error(`Error Http Requst => Errno: ${error.errno} Code: ${error.code} Syscall: ${error.syscall} Hostname: ${error.address} Port: ${error.port}`);
+                                        }
+                                        console.log(`Http Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                        downCount++;
+                                        portObj.status = 'DOWN';
+                                        // console.log("-----------------------------***-----------------------------");
+                                    });
+                                    req.end();
+                                }else {
+                                    console.log(`Http Checker False: Skip '${item.ipAddress}' Port '${portObj.port}'.`);
+                                }
                             }      
                         }
                         resolve();
