@@ -102,7 +102,6 @@ const allServiceHost = async () => {
                                         if (res.statusCode === portObj.statuscode) {
                                             console.log(`Http Checker: Up Found '${httpCheck.hostname}' Port '${httpCheck.port}'.`);
                                             // console.log(`Http Checker: Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                                            upCount++;
                                             portObj.status = 'UP';
                                             // res.on('data', d => {
                                             //   process.stdout.write(d);
@@ -121,7 +120,6 @@ const allServiceHost = async () => {
                                             console.error(`Error Http Requst => Errno: ${error.errno} Code: ${error.code} Syscall: ${error.syscall} Hostname: ${error.address} Port: ${error.port}`);
                                         }
                                         console.log(`Http Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                                        downCount++;
                                         portObj.status = 'DOWN';
                                     });
                                     await req.end();
@@ -131,12 +129,18 @@ const allServiceHost = async () => {
                                 // await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 10000, 12000 * 2); // wait for 24 secound to
                                 await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 10000, 60000 * 4); // wait for 5 minute to
                                 console.log(`Port Checker: Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                                upCount++;
                                 portObj.status = 'UP';
+                                if (portObj.status === "UP"){
+                                    // console.log("upCount++");
+                                    upCount++;
+                                }
                             } catch (e) {
                                 console.log(`Port Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                                downCount++;
                                 portObj.status = 'DOWN';
+                                if (portObj.status === "DOWN"){
+                                    // console.log("downCount++");
+                                    downCount++;
+                                }
                             }      
                         }
                         resolve();
