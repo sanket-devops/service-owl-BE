@@ -15,13 +15,14 @@ export interface Idashboard extends ICore {
 }
 
 export interface IPort {
+  _id: string;
   name: string;
   port: number;
   status: string;
   http: boolean;
   path: string; 
   method: string;
-  statuscode: number;
+  statuscode?: number;
 }
 
 
