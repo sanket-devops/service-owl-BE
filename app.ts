@@ -1,9 +1,16 @@
 import {Idashboard, IPort} from './interfaces/Idashboard';
 import {EStatus} from './interfaces/enums/EStatus';
 import * as moment from 'moment';
+import * as http from 'http';
+import * as https from 'https';
 
-const http = require('http');
-const https = require('https');
+process.on('unhandledRejection', (error: Error, promise) => {
+    console.log(error);
+});
+process.on('uncaughtException', function(error, origin) {
+    console.log(error);
+});
+
 const CryptoJS = require('crypto-js');
 let k = `j@mesbond`; // j@mesbond
 
@@ -72,12 +79,13 @@ const allServiceHost = async () => {
                     portsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
                         let portObj = item.port[i];
                         let isUp;
+                        let isHttpUp;
                         let httpCheck = {
                             hostname: item.ipAddress,
                             port: portObj.port,
                             path: portObj.path,
                             method: portObj.method,
-                            timeout: 10000
+                            timeout: 30000
                           };
                         // let httpCheck = {
                         //     hostname: '192.168.130.183',
@@ -87,61 +95,46 @@ const allServiceHost = async () => {
                         //     timeout: 10000
                         //   };
                         try {
-                            isUp = await tcpPortUsed.check(portObj.port, item.ipAddress);
-                        } catch (e) {
-                        }
-                        // isUp = await checkStatus();
-                        if (isUp === true) {
-                            upCount++;
-                            portObj.status = 'UP';
-                        } else {
-                            try {
-                                console.log(`Watching '${item.ipAddress}' Port '${portObj.port}'.`);
-                                if (portObj.http) {
-                                    let req = await http.request(httpCheck, res => {
-                                        if (res.statusCode === portObj.statuscode) {
-                                            console.log(`Http Checker: Up Found '${httpCheck.hostname}' Port '${httpCheck.port}'.`);
-                                            // console.log(`Http Checker: Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                                            portObj.status = 'UP';
-                                            // res.on('data', d => {
-                                            //   process.stdout.write(d);
-                                            // });
-                                        } else {
-                                            console.log(`Res Statuscode isn't matched '${res.statusCode}' = '${portObj.statuscode}' => '${item.ipAddress}' Port '${portObj.port}'.`);
-                                        };
-                                    });
-                                    await req.on('timeout', function () {
-                                        console.log("timeout! " + (httpCheck.timeout / 1000) + " seconds => Req expired: " + item.ipAddress + " Port: " + portObj.port);
-                                        req.destroy();
-                                    });
-                                    await req.on('error', error => {
-                                        if (error) {
-                                            // console.error(error);
-                                            console.error(`Error Http Requst => Errno: ${error.errno} Code: ${error.code} Syscall: ${error.syscall} Hostname: ${error.address} Port: ${error.port}`);
-                                        }
+                            if (portObj.http) {
+                                const __ret = await setHttpStatus(portObj, httpCheck, isHttpUp, item);
+                                isHttpUp = __ret.isHttpUp;
+                                if (isHttpUp) {
+                                    portObj.status = 'UP'
+                                } else {
+                                    console.log(`Http Watching: '${item.ipAddress}' Port '${portObj.port}'.`);
+                                    const __ret = await setHttpStatus(portObj, httpCheck, isHttpUp, item);
+                                    isHttpUp = __ret.isHttpUp;
+                                    if (isHttpUp) {
+                                        portObj.status = 'UP'
+                                        console.log(`Http Checker: Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                    } else {
+                                        portObj.status = 'Down'
                                         console.log(`Http Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                                        portObj.status = 'DOWN';
-                                    });
-                                    await req.end();
-                                }else {
-                                    console.log(`Http Checker False: Skip '${item.ipAddress}' Port '${portObj.port}'.`);
+                                    }
                                 }
-                                // await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 10000, 12000 * 2); // wait for 24 secound to
-                                await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 10000, 60000 * 4); // wait for 5 minute to
-                                console.log(`Port Checker: Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                                portObj.status = 'UP';
-                                if (portObj.status === "UP"){
-                                    // console.log("upCount++");
-                                    upCount++;
+                            } else {
+                                try {
+                                    isUp = await tcpPortUsed.check(portObj.port, item.ipAddress);
+                                    portObj.status = 'UP'
+                                } catch (error) {
+                                    try {
+                                        console.log(`Port Watching '${item.ipAddress}' Port '${portObj.port}'.`);
+                                        await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 10000, 60000 * 4); // wait for 5 minute to
+                                        portObj.status = 'UP'
+                                        console.log(`Port Checker: Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                    } catch (error) {
+                                        portObj.status = 'Down'
+                                        console.log(`Port Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                    }
                                 }
-                            } catch (e) {
-                                console.log(`Port Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                                portObj.status = 'DOWN';
-                                if (portObj.status === "DOWN"){
-                                    // console.log("downCount++");
-                                    downCount++;
-                                }
-                            }      
+                            }
+                            if (portObj.status === 'UP') {
+                                upCount++;
+                            } else {
+                                downCount++;
+                            }
+                        } catch (error) {
+                            console.log(error)
                         }
                         resolve();
                     }));
@@ -271,8 +264,8 @@ async function compareStatus() {
                         user: 'spatel@operrparking.com',
                         pass: '123@Soon'
                     },
-                    tls: { 
-                        rejectUnauthorized: false 
+                    tls: {
+                        rejectUnauthorized: false
                     },
                     dkim: {
                         domainName: "operrparking.com",
@@ -280,37 +273,37 @@ async function compareStatus() {
                         privateKey: '"-----BEGIN RSA PRIVATE KEY-----","MIIEogIBAAKCAQEAxp\/KVTc+tJKt+I2Zrh+tBUeBMfIRTIwGCj2nKi5xzMsphWGQ","fJAg6luD9VUGTx4l304yGF\/5saKgTi8wLJrM7jNrm3a+J8lBpsYDvaxL\/77k4WW3","E9TYBnPgzN3K39cfce+pFOPgOC2FZkwsiiAvE9acV28soHh6H0TEvfcLVYIkP8Np","bQ2adXekMfcnJcAOvnue1aycyWjBNOwCippDVkScdV9Kl3vhZamc1Wa2IncStE6L","v9BNYR5lShZCNODogSzq3rQWBojpSKxQaoGVE5hmMzNl4nkaSo1oK4DX7uW0BTVN","vQQ1alPJBRzvMQ4Ua\/r\/fFnq+oeux42P\/PRGewIDAQABAoIBAF1GwyU7uXXhgFO+","Y9Jyy7Uz\/EcxT9Br3ZZHl85mW0j6i7g4tjrZEKweaBz5Xeof1VdGCJ6Ly94Q6klt","Palk1SJ0AW\/T1r8mc29XhIA5fsNOqXv0YYKtrPlyx7pN2i0+gGToULYfwbeAISqG","UVBYhuNBINCqxAFkMq2mhOJVNvxjOsmVa3sOw2QBjfsFBE4SWwprwOqQYMIGrHYC","nlB0Mt7KNNjhR0LMnITA60sCADxHZsSsh0PH2VfyR2eMJK2jN6nRge44WaYjWJe4","ZQK5UiRp2s3rzoE3XBtsAGArVhGJ2Fhe78kEdmFfAEuzn\/F24sWcaqcjRh0+fwws","4glqsikCgYEA4cTyuwccf1uJ+6bvKbKxhGpHQLA4Oego0k4FPrpYWXtLKmPl+rcz","0Xz9rbZs02mBltyXGistCdnhAxFR\/389Cd31ouk1gzg8HOr09YF5P744ZW3YGC8N","DTfJHh7N49inCdMeP8bGABNPksigbNU2GMCGWZdoiRVrJnIg2MagEV0CgYEA4ThY","WHyqDxeXayK1SE9PLYUIR7O0dNOYsqIR9QFFRW9\/iHv5p\/IELVfHSo9ugkYsx+A9","bc09d+ICAfGJMXwn7jM2yLsKzldhB5joESVq8XIwMJ4Kip74MDffO4zScWwLbXLA","RcigJfhFvBcjwHnhi\/TLArWKMD25rADqVtJogbcCgYBjqG1BE52Htl+NPx35ORDV","E5jKPD9FiG5kjt4P12\/iZ+NBHgHJjw8HnPXZtVoKZFs4vbzRZ1elLpD9qqqYbpEC","BwFD3U+q0arvVOO2b2WXNp9sXnVyD2rid8qGSjC2L89kLdX\/bv290MhiUb9G60LK","4EktyQDy6gp3WQ+YwOytXQKBgAXzu0H7aXMkqHfIXwoeLnWBgoqCkU5VGT\/\/UIIt","GmuPWst8m0h4+OtJ2pZ52+3NdPmDT5xLREiazHrIq1uHcHa3G8eKSerSHFpbDCcH","2h+vaN6gDp9DPEPp9hhYzGb6+AJYegReHP1j5lPmOKepkPBl88eKjLBhsTp+e7L3","tJNZAoGAHbuHB3C0AfoZrT39JPcI+GtM72lPIsiIJqBwIeUAJz7PAiI\/Gv+sMAn\/","l6Riqa+Cx6lAIsXNJQEzNfUVgAt5XutxnokDuwiCRZgmhOSfXmQ2t6359XgERwNC","5lfKsqhl02NJPIWE7Id6iRqQHs6BGX3XJ105RfggRbSmpl0f\/a8=","-----END RSA PRIVATE KEY-----"'
                     }
                 });
-            
+
                 // Message object
                 let message = {
                     from: 'ServiceOwl <spatel@operrparking.com>',
-            
+
                     // Comma separated list of recipients
                     to: 'spatel.devops@gmail.com',
 
                     // bcc: 'andris@ethereal.email',
-            
+
                     // Subject of the message
                     subject: 'Service is down, Please check the mail for more details.',
-            
+
                     // plaintext body
                     text: JSON.stringify(downServices, null, 4),
-            
+
                     // HTML body
                     // html:
                     //     '<p><b>Hello</b> to myself <img src="cid:note@example.com"/></p>' +
                     //     '<p>Here\'s a nyan cat for you as an embedded attachment:<br/><img src="cid:nyan@example.com"/></p>',
-            
+
                     // An array of attachments
                     attachments: [
                         // String attachment
                     ]
                 };
-            
+
                 let info = await transporter.sendMail(message);
                 console.log('Message sent successfully as %s', info.messageId);
             }
-            
+
             main().catch(err => {
                 console.error(err.message);
                 process.exit(1);
@@ -352,4 +345,49 @@ function getRowsMap(rows: any[], key: string) {
     return obj;
 }
 
+async function setHttpStatus(portObj, httpCheck: { path: string; hostname: string; method: string; port: any; timeout: number }, isHttpUp, item): Promise<any> {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let isResolveCalled = false;
+            let req = http.request(httpCheck, (res) => {
+                // console.log(res.statusCode);
+                // portObj.statuscode = res.statusCode;
+                isHttpUp = true;
+                isResolveCalled = true;
+                resolve({isHttpUp});
+            });
+            req.on('timeout', function () {
+                console.log("timeout! " + (httpCheck.timeout / 1000) + " seconds => Req expired: " + item.ipAddress + " Port: " + portObj.port);
+                req.destroy();
+                if (!isResolveCalled) {
+                    isResolveCalled = true;
+                    resolve({isHttpUp: false});
+                }
+            });
+            req.on('error', (error: any) => {
+                if (error) {
+                    console.error(`Error Http Requst => Errno: ${error.errno} Code: ${error.code} Syscall: ${error.syscall} Hostname: ${error.address} Port: ${error.port}`);
+                    if (!isResolveCalled) {
+                        isResolveCalled = true;
+                        resolve({isHttpUp: false});
+                    }
+                } else {
+                    if (!isResolveCalled) {
+                        isResolveCalled = true;
+                        resolve({isHttpUp: false});
+                    }
+                }
+            });
+            req.end();
+        } catch (e) {
+            resolve({isHttpUp: false});
+        }
+    });
+
+}
+
 module.exports = app;
+function resolve(servicesPromiseArr: Promise<any>[]) {
+    throw new Error('Function not implemented.');
+}
+
