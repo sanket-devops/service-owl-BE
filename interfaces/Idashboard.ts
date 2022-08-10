@@ -22,7 +22,7 @@ export interface IPort {
   http: boolean;
   path: string; 
   method: string;
-  statuscode?: number;
+  statuscode: number;
 }
 
 
