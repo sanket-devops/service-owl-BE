@@ -3,7 +3,6 @@ import {EStatus} from './interfaces/enums/EStatus';
 import * as moment from 'moment';
 import * as http from 'http';
 import * as https from 'https';
-import * as S from '../../../../Volumes/Data/code/SavaGit/AM/api_maker_be/sandbox/SettingsSandbox';
 
 process.on('unhandledRejection', (error: Error, promise) => {
     console.log(error);
