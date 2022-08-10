@@ -15,7 +15,6 @@ export interface Idashboard extends ICore {
 }
 
 export interface IPort {
-  _id: string;
   name: string;
   port: number;
   status: string;
