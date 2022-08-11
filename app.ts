@@ -106,10 +106,10 @@ const allServiceHost = async () => {
                                     isHttpUp = __ret.isHttpUp;
                                     if (isHttpUp) {
                                         portObj.status = 'UP'
-                                        console.log(`Http Checker: Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                        console.log(`Http Checker: UP Found '${item.ipAddress}' Port '${portObj.port}'.`);
                                     } else {
-                                        portObj.status = 'Down'
-                                        console.log(`Http Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                        portObj.status = 'DOWN'
+                                        console.log(`Http Checker: DOWN Found '${item.ipAddress}' Port '${portObj.port}'.`);
                                     }
                                 }
                             } else {
@@ -121,10 +121,10 @@ const allServiceHost = async () => {
                                         console.log(`Port Watching '${item.ipAddress}' Port '${portObj.port}'.`);
                                         await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 10000, 60000 * 4); // wait for 5 minute to
                                         portObj.status = 'UP'
-                                        console.log(`Port Checker: Up Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                        console.log(`Port Checker: UP Found '${item.ipAddress}' Port '${portObj.port}'.`);
                                     } catch (error) {
-                                        portObj.status = 'Down'
-                                        console.log(`Port Checker: Down Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                        portObj.status = 'DOWN'
+                                        console.log(`Port Checker: DOWN Found '${item.ipAddress}' Port '${portObj.port}'.`);
                                     }
                                 }
                             }
