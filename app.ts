@@ -85,7 +85,7 @@ const allServiceHost = async () => {
                             port: portObj.port,
                             path: portObj.path,
                             method: portObj.method,
-                            timeout: 60000 * 2
+                            timeout: 10000
                           };
                         // let httpCheck = {
                         //     hostname: '192.168.130.183',
@@ -102,8 +102,13 @@ const allServiceHost = async () => {
                                     portObj.status = 'UP'
                                 } else {
                                     console.log(`Http Watching: '${item.ipAddress}' Port '${portObj.port}'.`);
-                                    const __ret = await setHttpStatus(portObj, httpCheck, isHttpUp, item);
-                                    isHttpUp = __ret.isHttpUp;
+                                    for (let index = 0; index < 23; index++) {
+                                        const __ret = await setHttpStatus(portObj, httpCheck, isHttpUp, item);
+                                        isHttpUp = __ret.isHttpUp;
+                                        if (isHttpUp) {
+                                            break;
+                                        }
+                                    }
                                     if (isHttpUp) {
                                         portObj.status = 'UP'
                                         console.log(`Http Checker: UP Found '${item.ipAddress}' Port '${portObj.port}'.`);
@@ -357,7 +362,7 @@ async function setHttpStatus(portObj, httpCheck: { path: string; hostname: strin
                 resolve({isHttpUp});
             });
             req.on('timeout', function () {
-                console.log("timeout! " + (httpCheck.timeout / 1000) + " seconds => Req expired: " + item.ipAddress + " Port: " + portObj.port);
+                // console.log("timeout! " + (httpCheck.timeout / 1000) + " seconds => Req expired: " + item.ipAddress + " Port: " + portObj.port);
                 req.destroy();
                 if (!isResolveCalled) {
                     isResolveCalled = true;
@@ -366,7 +371,7 @@ async function setHttpStatus(portObj, httpCheck: { path: string; hostname: strin
             });
             req.on('error', (error: any) => {
                 if (error) {
-                    console.error(`Error Http Requst => Errno: ${error.errno} Code: ${error.code} Syscall: ${error.syscall} Hostname: ${error.address} Port: ${error.port}`);
+                    // console.error(`Error Http Requst => Errno: ${error.errno} Code: ${error.code} Syscall: ${error.syscall} Hostname: ${error.address} Port: ${error.port}`);
                     if (!isResolveCalled) {
                         isResolveCalled = true;
                         resolve({isHttpUp: false});
