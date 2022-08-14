@@ -85,7 +85,7 @@ const allServiceHost = async () => {
                             port: portObj.port,
                             path: portObj.path,
                             method: portObj.method,
-                            timeout: 60000
+                            timeout: 60000 * 2
                           };
                         // let httpCheck = {
                         //     hostname: '192.168.130.183',
