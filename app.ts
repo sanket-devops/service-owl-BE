@@ -61,8 +61,10 @@ function getDecryptedData(ciphertext: any) {
 }
 
 let counter = 1;
+let isOwlChekcing: boolean;
 const allServiceHost = async () => {
     console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Start =>`, counter,`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
+    isOwlChekcing = true;
     let startDate = new Date().getTime();
     let allData: Idashboard[] = <any>await owlModel.find({}).select('ipAddress hostName port hostCheck').lean().exec();
     allData = JSON.parse(JSON.stringify(allData));
@@ -161,6 +163,7 @@ const allServiceHost = async () => {
 
     let endDate = new Date().getTime();
     console.log(`${moment().format('DD-MM-YYYY hh:mm:ss A Z')} : Data Refreshed in ${(endDate - startDate) / 1000}`);
+    isOwlChekcing = false;
     console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Stop =>`, counter++,`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
 }
 // setTimeout(allServiceHost(), 10000);
@@ -220,6 +223,14 @@ app.put('/hosts/update', async (req, res) => {
         let id = getDecryptedData(req.body.id);
         let post = await owlModel.findByIdAndUpdate({_id: id}, tempData, {new: true, runValidator: true});
         res.send(post);
+        let doUpdate = async() => {
+            if (isOwlChekcing) {
+                setTimeout(doUpdate, 1000);
+            } else {
+                await owlModel.findByIdAndUpdate({_id: id}, tempData, {new: true, runValidator: true});
+            }
+           }
+        doUpdate();
     } catch (e) {
         res.status(500);
     }
