@@ -1,6 +1,8 @@
 import {Idashboard, IPort} from './interfaces/Idashboard';
 import {EStatus} from './interfaces/enums/EStatus';
-import * as moment from 'moment';
+import Fastify from 'fastify'
+import cors from '@fastify/cors'
+import moment from 'moment';
 import * as http from 'http';
 import * as https from 'https';
 
@@ -14,17 +16,15 @@ process.on('uncaughtException', function(error, origin) {
 const CryptoJS = require('crypto-js');
 let k = `j@mesbond`; // j@mesbond
 
-const fastify = require('fastify')({
-    // logger: true
-})
+const fastify = Fastify()
 
 let app = fastify;
-app.register(require('fastify-cors'), {
+fastify.register(cors, { 
     // put your options here
-});
+  })
 const tcpPortUsed = require('tcp-port-used');
 const mongoose = require('mongoose');
-mongoose.set('useFindAndModify', false);
+// mongoose.set('useFindAndModify', false);
 const boom = require('boom');
 const bodyParser = require('body-parser');
 const hostname = '0.0.0.0';
@@ -36,16 +36,16 @@ let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.120.135:27017/service-owl
 let allData = [];
 let nodemailer = require('nodemailer');
 
-mongoose.Promise = global.Promise;
+// mongoose.Promise = global.Promise;
 
 mongoose.connect(db, {
-    promiseLibrary: Promise,
+    // promiseLibrary: Promise,
     useNewUrlParser: true,
     useUnifiedTopology: true,
 }).then(() => console.log(`MongoDB Connected: ${db}`)).catch(console.error);
 
 
-app.listen(port, '0.0.0.0', function () {
+app.listen({port: port, host: hostname}, function () {
     console.log(`service-owl app listen at : http://${hostname}:${port}`)
 });
 
@@ -194,7 +194,7 @@ app.get('/hosts', async (req, res) => {
 // });
 
 //post
-app.post('/hosts/host-save', async (req, res) => {
+app.post('/hosts/host-save', async (req: any, res) => {
     try {
         let tempData = JSON.parse(getDecryptedData(req.body.data));
         let saved = await owlModel.create(tempData);
@@ -207,7 +207,7 @@ app.post('/hosts/host-save', async (req, res) => {
 });
 
 //get byId
-app.get('/hosts/:postId', async (req, res) => {
+app.get('/hosts/:postId', async (req: any, res) => {
     try {
         let post = await owlModel.findOne({_id: req.params.postId});
         res.send(post);
@@ -217,7 +217,7 @@ app.get('/hosts/:postId', async (req, res) => {
 });
 
 //update
-app.put('/hosts/update', async (req, res) => {
+app.put('/hosts/update', async (req: any, res) => {
     try {
         let tempData = JSON.parse(getDecryptedData(req.body.data));
         let id = getDecryptedData(req.body.id);
@@ -237,7 +237,7 @@ app.put('/hosts/update', async (req, res) => {
 });
 
 //delete
-app.post('/hosts/host-delete', async (req, res) => {
+app.post('/hosts/host-delete', async (req: any, res) => {
     try {
         let post = await owlModel.findByIdAndRemove({
             _id: getDecryptedData(req.body.data)
