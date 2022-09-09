@@ -1,5 +1,6 @@
 import {Idashboard, IPort} from './interfaces/Idashboard';
 import {EStatus} from './interfaces/enums/EStatus';
+import { table } from 'table';
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import moment from 'moment';
@@ -30,8 +31,8 @@ const bodyParser = require('body-parser');
 const hostname = '0.0.0.0';
 const port = 8002;
 let owlModel = require('./owl.model');
-let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.120.135:27017/service-owl?authSource=admin';
-// let db = 'mongodb://admin:admin@192.168.10.166:32717/service-owl?authSource=admin';
+// let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.120.135:27017/service-owl?authSource=admin';
+let db = 'mongodb://admin:admin@192.168.10.166:32717/service-owl?authSource=admin';
 // let db = 'mongodb://localhost:27017/service-owl?authSource=admin';
 let allData = [];
 let nodemailer = require('nodemailer');
@@ -254,6 +255,7 @@ let localStorageData: Idashboard[];
 async function compareStatus() {
     let res: Idashboard[] = JSON.parse(JSON.stringify(await owlModel.find({}).lean().exec()));
     let oldDashboard = localStorageData
+    let downHostServices = [];
     if (oldDashboard && oldDashboard.length) {
         let oldStorageMap = getRowsMap(oldDashboard, '_id');
         let changeFound = false;
@@ -264,11 +266,24 @@ async function compareStatus() {
             let downPortsList: IPort[] = comparePortsArrAndGetDownServices(oldItem.port, item.port);
             if (downPortsList.length) {
                 changeFound = true;
-                console.log('Change found in ', item.hostName);
-                downServices.push({host: item.hostName, ports: downPortsList});
+                console.log('Change found in ', item.hostName, " => ", item.ipAddress);
+                downServices.push({hostname: item.hostName, host: item.ipAddress, ports: downPortsList});
                 // break;
             }
         }
+        downServices.forEach(element => {
+            downHostServices.push([element.hostname, " => ",element.host]);
+            for (let index = 0; index < element.ports.length; index++) {
+                downHostServices.push([element.ports[index].name, element.ports[index].port, element.ports[index].status])
+            }
+        });
+        const tableConfig = {
+          columns: {
+            0: { width: 30 },
+            1: { width: 5 },
+            2: { width: 20 }
+          }
+        };
         if (changeFound) {
             async function main() {
                 // Create a SMTP transporter object
@@ -303,7 +318,8 @@ async function compareStatus() {
                     subject: 'Service is down, Please check the mail for more details.',
 
                     // plaintext body
-                    text: JSON.stringify(downServices, null, 4),
+                    // text: JSON.stringify(downServices, null, 4),
+                    text: table(downHostServices, tableConfig),
 
                     // HTML body
                     // html:
