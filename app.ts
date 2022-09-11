@@ -1,6 +1,9 @@
 import {Idashboard, IPort} from './interfaces/Idashboard';
 import {EStatus} from './interfaces/enums/EStatus';
-import * as moment from 'moment';
+import { table, getBorderCharacters } from 'table';
+import Fastify from 'fastify'
+import cors from '@fastify/cors'
+import moment from 'moment';
 import * as http from 'http';
 import * as https from 'https';
 
@@ -14,38 +17,36 @@ process.on('uncaughtException', function(error, origin) {
 const CryptoJS = require('crypto-js');
 let k = `j@mesbond`; // j@mesbond
 
-const fastify = require('fastify')({
-    // logger: true
-})
+const fastify = Fastify()
 
 let app = fastify;
-app.register(require('fastify-cors'), {
+fastify.register(cors, { 
     // put your options here
-});
+  })
 const tcpPortUsed = require('tcp-port-used');
 const mongoose = require('mongoose');
-mongoose.set('useFindAndModify', false);
+// mongoose.set('useFindAndModify', false);
 const boom = require('boom');
 const bodyParser = require('body-parser');
 const hostname = '0.0.0.0';
 const port = 8002;
 let owlModel = require('./owl.model');
-let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.120.135:27017/service-owl?authSource=admin';
-// let db = 'mongodb://admin:admin@192.168.10.166:32717/service-owl?authSource=admin';
+// let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.120.135:27017/service-owl?authSource=admin';
+let db = 'mongodb://admin:admin@192.168.10.166:32717/service-owl?authSource=admin';
 // let db = 'mongodb://localhost:27017/service-owl?authSource=admin';
 let allData = [];
 let nodemailer = require('nodemailer');
 
-mongoose.Promise = global.Promise;
+// mongoose.Promise = global.Promise;
 
 mongoose.connect(db, {
-    promiseLibrary: Promise,
+    // promiseLibrary: Promise,
     useNewUrlParser: true,
     useUnifiedTopology: true,
 }).then(() => console.log(`MongoDB Connected: ${db}`)).catch(console.error);
 
 
-app.listen(port, '0.0.0.0', function () {
+app.listen({port: port, host: hostname}, function () {
     console.log(`service-owl app listen at : http://${hostname}:${port}`)
 });
 
@@ -194,7 +195,7 @@ app.get('/hosts', async (req, res) => {
 // });
 
 //post
-app.post('/hosts/host-save', async (req, res) => {
+app.post('/hosts/host-save', async (req: any, res) => {
     try {
         let tempData = JSON.parse(getDecryptedData(req.body.data));
         let saved = await owlModel.create(tempData);
@@ -207,7 +208,7 @@ app.post('/hosts/host-save', async (req, res) => {
 });
 
 //get byId
-app.get('/hosts/:postId', async (req, res) => {
+app.get('/hosts/:postId', async (req: any, res) => {
     try {
         let post = await owlModel.findOne({_id: req.params.postId});
         res.send(post);
@@ -217,7 +218,7 @@ app.get('/hosts/:postId', async (req, res) => {
 });
 
 //update
-app.put('/hosts/update', async (req, res) => {
+app.put('/hosts/update', async (req: any, res) => {
     try {
         let tempData = JSON.parse(getDecryptedData(req.body.data));
         let id = getDecryptedData(req.body.id);
@@ -237,7 +238,7 @@ app.put('/hosts/update', async (req, res) => {
 });
 
 //delete
-app.post('/hosts/host-delete', async (req, res) => {
+app.post('/hosts/host-delete', async (req: any, res) => {
     try {
         let post = await owlModel.findByIdAndRemove({
             _id: getDecryptedData(req.body.data)
@@ -254,6 +255,7 @@ let localStorageData: Idashboard[];
 async function compareStatus() {
     let res: Idashboard[] = JSON.parse(JSON.stringify(await owlModel.find({}).lean().exec()));
     let oldDashboard = localStorageData
+    let downHostServices = [];
     if (oldDashboard && oldDashboard.length) {
         let oldStorageMap = getRowsMap(oldDashboard, '_id');
         let changeFound = false;
@@ -264,11 +266,27 @@ async function compareStatus() {
             let downPortsList: IPort[] = comparePortsArrAndGetDownServices(oldItem.port, item.port);
             if (downPortsList.length) {
                 changeFound = true;
-                console.log('Change found in ', item.hostName);
-                downServices.push({host: item.hostName, ports: downPortsList});
+                console.log('Change found in ', item.hostName, " => ", item.ipAddress);
+                downServices.push({hostname: item.hostName, host: item.ipAddress, ports: downPortsList});
                 // break;
             }
         }
+        downServices.forEach(element => {
+            downHostServices.push([element.hostname, " => ",element.host]);
+            for (let index = 0; index < element.ports.length; index++) {
+                downHostServices.push([element.ports[index].name, element.ports[index].port, element.ports[index].status])
+            }
+            downHostServices.push(["***************", "*****", "***************"]);
+        });
+        const tableConfig = {
+            // border: getBorderCharacters('honeywell'),
+            columns: [
+              { alignment: 'center'},
+              { alignment: 'center'},
+              { alignment: 'center'}
+            ],
+            drawVerticalLine: () => false
+        };
         if (changeFound) {
             async function main() {
                 // Create a SMTP transporter object
@@ -303,7 +321,8 @@ async function compareStatus() {
                     subject: 'Service is down, Please check the mail for more details.',
 
                     // plaintext body
-                    text: JSON.stringify(downServices, null, 4),
+                    // text: JSON.stringify(downServices, null, 4),
+                    text: table(downHostServices, tableConfig),
 
                     // HTML body
                     // html:
@@ -317,7 +336,8 @@ async function compareStatus() {
                 };
 
                 let info = await transporter.sendMail(message);
-                console.log('Message sent successfully as %s', info.messageId);
+                console.log('Down Services => Message sent successfully as %s', info.messageId);
+                console.log(table(downHostServices));
             }
 
             main().catch(err => {

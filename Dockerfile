@@ -1,5 +1,5 @@
 ### STAGE 1: Build ###
-FROM node:14.0.0-alpine
+FROM node:16.15.1-alpine
 
 WORKDIR /app
 

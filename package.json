@@ -1,8 +1,8 @@
 {
-  "name": "express",
-  "version": "4.17.1",
+  "name": "service-owl-be",
+  "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "app.ts",
   "scripts": {
     "start": "ts-node -T app.ts",
     "dev": "nodemon -T app.ts",
@@ -10,24 +10,25 @@
     "fastify": "node ./fastify-server/server.js"
   },
   "dependencies": {
-    "body-parser": "^1.19.0",
+    "@fastify/cors": "^8.1.0",
+    "body-parser": "^1.20.0",
     "boom": "^7.3.0",
-    "crypto-js": "^4.0.0",
-    "fastify": "^3.12.0",
-    "fastify-cors": "^5.2.0",
-    "fastify-swagger": "^4.3.1",
+    "crypto-js": "^4.1.1",
+    "fastify": "^4.5.3",
+    "fastify-swagger": "^5.2.0",
     "https": "^1.0.0",
-    "moment": "^2.29.1",
-    "mongoose": "^5.11.18",
-    "nodemailer": "^6.5.0",
+    "moment": "^2.29.4",
+    "mongoose": "^6.5.4",
+    "nodemailer": "^6.7.8",
     "nodestorage": "^0.9.17",
+    "table": "^6.8.0",
     "tcp-port-used": "^1.0.2",
-    "ts-node": "^9.1.1"
+    "ts-node": "^10.9.1"
   },
   "devDependencies": {
     "@types/crypto-js": "^4.0.1",
-    "nodemon": "^2.0.7",
-    "typescript": "^4.2.4"
+    "nodemon": "^2.0.19",
+    "typescript": "^4.8.2"
   },
   "author": "",
   "license": "ISC"
