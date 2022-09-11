@@ -1,6 +1,6 @@
 import {Idashboard, IPort} from './interfaces/Idashboard';
 import {EStatus} from './interfaces/enums/EStatus';
-import { table } from 'table';
+import { table, getBorderCharacters } from 'table';
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import moment from 'moment';
@@ -276,13 +276,16 @@ async function compareStatus() {
             for (let index = 0; index < element.ports.length; index++) {
                 downHostServices.push([element.ports[index].name, element.ports[index].port, element.ports[index].status])
             }
+            downHostServices.push(["***************", "*****", "***************"]);
         });
         const tableConfig = {
-          columns: {
-            0: { width: 30 },
-            1: { width: 5 },
-            2: { width: 20 }
-          }
+            // border: getBorderCharacters('honeywell'),
+            columns: [
+              { alignment: 'center'},
+              { alignment: 'center'},
+              { alignment: 'center'}
+            ],
+            drawVerticalLine: () => false
         };
         if (changeFound) {
             async function main() {
@@ -333,7 +336,8 @@ async function compareStatus() {
                 };
 
                 let info = await transporter.sendMail(message);
-                console.log('Message sent successfully as %s', info.messageId);
+                console.log('Down Services => Message sent successfully as %s', info.messageId);
+                console.log(table(downHostServices));
             }
 
             main().catch(err => {
