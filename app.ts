@@ -178,7 +178,7 @@ app.get('/', (req, res) => {
 
 app.get('/hosts', async (req, res) => {
     try {
-        let hosts = await owlModel.find({});
+        let hosts = await owlModel.find({}).sort({_id:-1});
         res.send({data: getEncryptedData(hosts)});
     } catch (e) {
         res.status(500);
