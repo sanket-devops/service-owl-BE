@@ -1,4 +1,4 @@
-import {Idashboard, IPort} from './interfaces/Idashboard';
+import {IhostMetrics, Idashboard, IPort} from './interfaces/Idashboard';
 import {EStatus} from './interfaces/enums/EStatus';
 import { table, getBorderCharacters } from 'table';
 import Fastify from 'fastify'
@@ -32,8 +32,8 @@ const bodyParser = require('body-parser');
 const hostname = '0.0.0.0';
 const port = 8002;
 let owlModel = require('./owl.model');
-let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.120.135:27017/service-owl?authSource=admin';
-// let db = 'mongodb://admin:admin@192.168.10.166:32717/service-owl?authSource=admin';
+// let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.120.135:27017/service-owl?authSource=admin';
+let db = 'mongodb://admin:admin@192.168.10.166:32717/service-owl?authSource=admin';
 // let db = 'mongodb://localhost:27017/service-owl?authSource=admin';
 let allData = [];
 let nodemailer = require('nodemailer');
@@ -68,7 +68,7 @@ const allServiceHost = async () => {
     console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Start =>`, counter,`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
     isOwlChekcing = true;
     let startDate = new Date().getTime();
-    let allData: Idashboard[] = <any>await owlModel.find({}).select('ipAddress hostName port hostCheck').lean().exec();
+    let allData: Idashboard[] = <any>await owlModel.find({}).select('ipAddress userName userPass hostName port hostMetrics hostCheck').lean().exec();
     allData = JSON.parse(JSON.stringify(allData));
     let servicesPromiseArr: Promise<any>[] = [];
     // loop services
@@ -79,6 +79,24 @@ const allServiceHost = async () => {
 
                 let downCount = 0;
                 let portsPromiseArr: Promise<any>[] = [];
+                let hostMetricsPromiseArr: Promise<any>[] = [];
+
+                if (item.userName && item.userPass) {
+                    hostMetricsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
+
+                        let host = item.ipAddress;
+                        let port = 22;
+                        let username = item.userName;
+                        let password = item.userPass;
+
+                        let hostMetricsData: IhostMetrics[] = item.hostMetrics;
+                        let resHostMetrics: any = sshHostMetrics(host, port, username, password);
+                        owlModel.creat
+                        // hostMetricsData.push(resHostMetrics);
+                        resolve();
+                    }));
+                }
+
                 for (let i = 0; i < item.port.length; i++) {
                     portsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
                         let portObj = item.port[i];
@@ -121,7 +139,7 @@ const allServiceHost = async () => {
                                     portObj.status = 'UP'
                                 } catch (error) {
                                     try {
-                                        console.log(`Port Watching '${item.ipAddress}' Port '${portObj.port}'.`);
+                                        console.log(`Port Watching: '${item.ipAddress}' Port '${portObj.port}'.`);
                                         await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 10000, 60000 * 4); // wait for 5 minute to
                                         portObj.status = 'UP'
                                         console.log(`Port Checker: UP Found '${item.ipAddress}' Port '${portObj.port}'.`);
@@ -424,73 +442,89 @@ async function setHttpStatus(portObj, httpCheck: { path: string; hostname: strin
 }
 
 
-let arr = ["CPU", "DiskFree", "MemAvailable","uptime"];
-let obj = {
-  CPU: "lscpu | grep 'CPU(s):' | awk 'FNR == 1 {print $2}'",
-  DiskFree: "df -h / | grep / | awk '{ print $4}'",
-  MemAvailable: "cat /proc/meminfo | grep MemAvailable | awk '{ print $2}'",
-  uptime: "uptime -p | awk '{ print $2,$3,$4,$5 }'"
-}
-let count = arr.length - 1;
-let sshCount = 1;
+async function sshHostMetrics(host: string, port: number, username: string, password: string) {
 
+    let metricsArr: string[] = ["DiskTotal", "DiskFree", "MemTotal", "MemAvailable", "CpuUsage", "CPU", "uptime"];
+    let metricsCom: any = {
+        DiskTotal: "df -h / | grep / | awk '{ print $2}'",
+        DiskFree: "df -h / | grep / | awk '{ print $4}'",
+        MemTotal: "cat /proc/meminfo | grep MemTotal | awk '{ print $2}'",
+        MemAvailable: "cat /proc/meminfo | grep MemAvailable | awk '{ print $2}'",
+        CpuUsage: "top -bn2|grep '%Cpu'|tail -1|grep -P '(....|...) id,'|awk '{print 100-$8}'",
+        CPU: "lscpu | grep 'CPU(s):' | awk 'FNR == 1 {print $2}'",
+        uptime: "uptime -p | awk '{ print $2,$3,$4,$5 }'"
+    }
+    let count = metricsArr.length - 1;
+    let hostMetrics: any = [];
 
+    let resData: any = {};
+    for (let k of metricsArr) {
+        let resDataPromiseArr: any = [];
+        resDataPromiseArr.push(
+            new Promise(async (resolve: any, reject: any) => {
+                if (k in metricsCom) {
+                    let conn = new Client();
+                    conn.on('ready', async () => {
+                        conn.exec(`${metricsCom[k]}`, (err, stream) => {
+                            if (err) throw err;
+                            stream.on('close', () => {
+                                // console.log(resData);
+                                resolve();
+                                conn.end();
+                                if (count === metricsArr.indexOf(k)) {
+                                    // console.log(resData);
+                                    // newRes.push({"data": resData});
+                                    let DiskTotal = resData.DiskTotal;
+                                    let DiskFree = resData.DiskFree;
+                                    let MemTotal = ((resData.MemTotal / 1024) / 1024).toFixed(1) + 'G';
+                                    let MemAvailable = ((resData.MemAvailable / 1024) / 1024).toFixed(1) + 'G';
+                                    let CpuUsage = resData.CpuUsage;
+                                    let CPU = resData.CPU + 'CPU';
+                                    let uptime = resData.uptime;
 
-async function sshCall(arr, obj) {
-  let newRes = <any>[];
-  let resData = <any>{};
+                                    hostMetrics.push({
+                                        "DiskTotal": DiskTotal,
+                                        "DiskFree": DiskFree,
+                                        "MemTotal": MemTotal,
+                                        "MemAvailable": MemAvailable,
+                                        "CpuUsage": CpuUsage,
+                                        "CPU": CPU,
+                                        "uptime": uptime,
+                                    });
 
-  for (let k of arr) {
-    let resDataPromiseArr = <any>[];
-    resDataPromiseArr.push(
-      new Promise(async (resolve, reject) => {
-        if (k in obj) {
-          // resData[k] = obj[k];
-          let conn = new Client();
-          conn.on('ready', async () => {
-            conn.exec(`${obj[k]}`, (err, stream) => {
-              if (err) throw err;
-              stream.on('close', () => {
-                // console.log(resData);
-                resolve(newRes);
-                conn.end();
-                if (count === arr.indexOf(k)) {
-                  // console.log(resData);
-                  // newRes.push({"data": resData});
-                  let CPU = resData.CPU + 'CPU';
-                  let DiskFree =  resData.DiskFree;
-                  let MemAvailable = ((resData.MemAvailable/1024)/1024).toFixed(1) + 'G';
-                  let uptime = (resData.uptime).replace(/,/g, '');
-
-                  newRes.push({
-                    "CPU": CPU,
-                    "DiskFree": DiskFree,
-                    "MemAvailable": MemAvailable,
-                    "uptime": uptime
-                  });
-                  // newRes.push(resData);
+                                }
+                            }).on('data', async (data) => {
+                                let output = await JSON.parse(JSON.stringify('' + data));
+                                // resData[k] = await output.replace(/(\r\n|\n|\r)/gm, "");
+                                resData[k] = await output.replace(/\n/g, '');
+                            });
+                        });
+                    }).on('error', (err) => {
+                        hostMetrics.push({
+                            "DiskTotal": "No Data",
+                            "DiskFree": "No Data",
+                            "MemTotal": "No Data",
+                            "MemAvailable": "No Data",
+                            "CpuUsage": "No Data",
+                            "CPU": 0,
+                            "uptime": "No Data",
+                        });
+                        console.log(`ssh: connect to host ${host} port ${port}: Connection refused`)
+                    }).connect({
+                        host: host,
+                        port: port,
+                        username: username,
+                        password: password
+                    });
                 }
-              }).on('data', async (data) => {
-                let output = await JSON.parse(JSON.stringify('' + data));
-                resData[k] = await output.replace(/(\r\n|\n|\r)/gm, "");
-              });
-            });
-          }).connect({
-            host: '192.168.130.162',
-            port: 22,
-            username: 'bynforqa',
-            password: 'Aqro$2021%fnyb'
-          });
-        }
-      })
-    );
-    await Promise.all(resDataPromiseArr);
-  }
-  return await newRes;
+            })
+        );
+        await Promise.all(resDataPromiseArr);
+    }
+    console.log(hostMetrics);
+    return hostMetrics;
 }
 
-
-console.log(sshCall(arr, obj));
 
 module.exports = app;
 function resolve(servicesPromiseArr: Promise<any>[]) {
