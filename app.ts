@@ -6,6 +6,7 @@ import cors from '@fastify/cors'
 import moment from 'moment';
 import * as http from 'http';
 import * as https from 'https';
+import { Client } from 'ssh2';
 
 process.on('unhandledRejection', (error: Error, promise) => {
     console.log(error);
@@ -89,14 +90,8 @@ const allServiceHost = async () => {
                             path: portObj.path,
                             method: portObj.method,
                             timeout: 10000
-                          };
-                        // let httpCheck = {
-                        //     hostname: '192.168.130.183',
-                        //     port: 8888,
-                        //     path: '/',
-                        //     method: 'GET',
-                        //     timeout: 10000
-                        //   };
+                        };
+
                         try {
                             if (portObj.http) {
                                 const __ret = await setHttpStatus(portObj, httpCheck, isHttpUp, item);
@@ -255,11 +250,11 @@ let localStorageData: Idashboard[];
 async function compareStatus() {
     let res: Idashboard[] = JSON.parse(JSON.stringify(await owlModel.find({}).lean().exec()));
     let oldDashboard = localStorageData
-    let downHostServices = [];
+    let downHostServices: any = [];
     if (oldDashboard && oldDashboard.length) {
         let oldStorageMap = getRowsMap(oldDashboard, '_id');
         let changeFound = false;
-        let downServices = [];
+        let downServices: any = [];
         for (let item of res) {
             let oldItem: Idashboard = oldStorageMap[item._id];
             if (!oldItem) continue;
@@ -278,7 +273,7 @@ async function compareStatus() {
             }
             downHostServices.push(["***************", "*****", "***************"]);
         });
-        const tableConfig = {
+        const tableConfig: any = {
             // border: getBorderCharacters('honeywell'),
             columns: [
               { alignment: 'center'},
@@ -427,6 +422,75 @@ async function setHttpStatus(portObj, httpCheck: { path: string; hostname: strin
     });
 
 }
+
+
+let arr = ["CPU", "DiskFree", "MemAvailable","uptime"];
+let obj = {
+  CPU: "lscpu | grep 'CPU(s):' | awk 'FNR == 1 {print $2}'",
+  DiskFree: "df -h / | grep / | awk '{ print $4}'",
+  MemAvailable: "cat /proc/meminfo | grep MemAvailable | awk '{ print $2}'",
+  uptime: "uptime -p | awk '{ print $2,$3,$4,$5 }'"
+}
+let count = arr.length - 1;
+let sshCount = 1;
+
+
+
+async function sshCall(arr, obj) {
+  let newRes = <any>[];
+  let resData = <any>{};
+
+  for (let k of arr) {
+    let resDataPromiseArr = <any>[];
+    resDataPromiseArr.push(
+      new Promise(async (resolve, reject) => {
+        if (k in obj) {
+          // resData[k] = obj[k];
+          let conn = new Client();
+          conn.on('ready', async () => {
+            conn.exec(`${obj[k]}`, (err, stream) => {
+              if (err) throw err;
+              stream.on('close', () => {
+                // console.log(resData);
+                resolve(newRes);
+                conn.end();
+                if (count === arr.indexOf(k)) {
+                  // console.log(resData);
+                  // newRes.push({"data": resData});
+                  let CPU = resData.CPU + 'CPU';
+                  let DiskFree =  resData.DiskFree;
+                  let MemAvailable = ((resData.MemAvailable/1024)/1024).toFixed(1) + 'G';
+                  let uptime = (resData.uptime).replace(/,/g, '');
+
+                  newRes.push({
+                    "CPU": CPU,
+                    "DiskFree": DiskFree,
+                    "MemAvailable": MemAvailable,
+                    "uptime": uptime
+                  });
+                  // newRes.push(resData);
+                }
+              }).on('data', async (data) => {
+                let output = await JSON.parse(JSON.stringify('' + data));
+                resData[k] = await output.replace(/(\r\n|\n|\r)/gm, "");
+              });
+            });
+          }).connect({
+            host: '192.168.130.162',
+            port: 22,
+            username: 'bynforqa',
+            password: 'Aqro$2021%fnyb'
+          });
+        }
+      })
+    );
+    await Promise.all(resDataPromiseArr);
+  }
+  return await newRes;
+}
+
+
+console.log(sshCall(arr, obj));
 
 module.exports = app;
 function resolve(servicesPromiseArr: Promise<any>[]) {

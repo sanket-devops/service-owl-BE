@@ -4,6 +4,8 @@ export interface Idashboard extends ICore {
   hostCheck: boolean,
   hostName: string,
   ipAddress: string,
+  userName: string,
+  userPass: string,
   port: IPort[],
   linkTo: ILinked[],
   groupName: string,
