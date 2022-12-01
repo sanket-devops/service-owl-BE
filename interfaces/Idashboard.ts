@@ -1,5 +1,4 @@
 import {ICore} from './Icore';
-import {ICore_hostMetrics} from './Icore_hostMetrics';
 
 export interface Idashboard extends ICore {
   hostCheck: boolean,
@@ -36,7 +35,7 @@ export interface ILinked {
 }
 
 
-export interface IhostMetrics extends ICore_hostMetrics {
+export interface IhostMetrics {
   DiskTotal: string;
   DiskFree: string;
   MemTotal: string;
@@ -44,4 +43,5 @@ export interface IhostMetrics extends ICore_hostMetrics {
   CpuUsage: string;
   CPU: string;
   uptime: string;
+  createdAt: Date;
 }
