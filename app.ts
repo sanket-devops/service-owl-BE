@@ -88,16 +88,22 @@ const allServiceHost = async () => {
                         let port = 22;
                         let username = item.userName;
                         let password = item.userPass;
-
+                        let keepMetrics = 5
                         let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
                         item.hostMetrics = item.hostMetrics || [];
+
+                        // Keep Array side fix and remove fist item 
+                        for (let index = 0; index < item.hostMetrics.length; index++) {
+                            if (item.hostMetrics.length >= keepMetrics) {
+                                // console.log(item.hostMetrics.shift());
+                                item.hostMetrics.shift();
+                            }
+                        }
                         item.hostMetrics.push(resHostMetrics);
-                        
                         let metricsData = item.hostMetrics
                         await owlModel.findOneAndUpdate({_id: item._id}, {$set: {hostMetrics: metricsData}}).exec();
                         // console.log(item.hostMetrics);
                         resolve();
-                        
                     }));
                 }
 
@@ -494,7 +500,7 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                                     let CpuUsage = resData.CpuUsage;
                                     let CPU = resData.CPU + 'CPU';
                                     let uptime = resData.uptime;
-                                    let createdAt = new Date();
+                                    let createdAt = new Date(); // ISO 8601 Date will saved to DB
 
                                     hostMetrics = {
                                         "DiskTotal": DiskTotal,
