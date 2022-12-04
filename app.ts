@@ -90,19 +90,38 @@ const allServiceHost = async () => {
                         let password = item.userPass;
                         let keepMetrics = 5
                         let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
-                        item.hostMetrics = item.hostMetrics || [];
+                        // console.log(resHostMetrics)
+                        item.hostMetrics = item.hostMetrics || [{
+                            "diskStatus":[['Timestamp', 'DiskTotal', 'DiskFree']],
+                            "memStatus":[['Timestamp', 'MemTotal', 'MemAvailable']],
+                            "cpuStatus":[['Timestamp', 'CPUTotal', 'CpuUsage']],
+                            "CPU": Number,
+                            "uptime": ''
+                        }];
 
-                        // Keep Array side fix and remove fist item 
-                        for (let index = 0; index < item.hostMetrics.length; index++) {
-                            if (item.hostMetrics.length >= keepMetrics) {
-                                // console.log(item.hostMetrics.shift());
-                                item.hostMetrics.shift();
-                            }
-                        }
-                        item.hostMetrics.push(resHostMetrics);
+                        // Keep Array size fix and remove fist item
+                        // for (let arrayItem = 0; arrayItem < item.hostMetrics.length; arrayItem++) {
+                        //     console.log(item.hostMetrics[arrayItem])
+
+                            // for (let index = 0; index < item.hostMetrics[item].length; index++) {
+                            //     if (item.hostMetrics.length >= keepMetrics) {
+                            //         // console.log(item.hostMetrics.shift());
+                            //         // item.hostMetrics.shift();
+                            //         // item.hostMetrics.splice(1, 1);
+                            //         console.log("Array full")                                
+                            //     }
+                            // }
+                            
+                        // }
+
+                        item.hostMetrics[0].diskStatus.push(resHostMetrics.diskStatus);
+                        item.hostMetrics[0].memStatus.push(resHostMetrics.memStatus);
+                        item.hostMetrics[0].cpuStatus.push(resHostMetrics.cpuStatus);
+                        item.hostMetrics[0].CPU = resHostMetrics.CPU;
+                        item.hostMetrics[0].uptime = resHostMetrics.uptime;
                         let metricsData = item.hostMetrics
                         await owlModel.findOneAndUpdate({_id: item._id}, {$set: {hostMetrics: metricsData}}).exec();
-                        // console.log(item.hostMetrics);
+                        console.log(item.hostMetrics);
                         resolve();
                     }));
                 }
@@ -456,8 +475,8 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
 
     let metricsArr: string[] = ["DiskTotal", "DiskFree", "MemTotal", "MemAvailable", "CpuUsage", "CPU", "uptime"];
     let metricsCom: any = {
-        DiskTotal: "df -h / | grep / | awk '{ print $2}'",
-        DiskFree: "df -h / | grep / | awk '{ print $4}'",
+        DiskTotal: "df / | grep / | awk '{ print $2}'",
+        DiskFree: "df / | grep / | awk '{ print $4}'",
         MemTotal: "cat /proc/meminfo | grep MemTotal | awk '{ print $2}'",
         MemAvailable: "cat /proc/meminfo | grep MemAvailable | awk '{ print $2}'",
         CpuUsage: "top -bn2|grep '%Cpu'|tail -1|grep -P '(....|...) id,'|awk '{print 100-$8}'",
@@ -467,14 +486,11 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
     let count = metricsArr.length - 1;
 
     let hostMetrics: any = {
-        "DiskTotal": String,
-        "DiskFree": String,
-        "MemTotal": String,
-        "MemAvailable": String,
-        "CpuUsage": String,
-        "CPU": String,
-        "uptime": String,
-        createdAt: String
+        "diskStatus": [],
+        "memStatus": [],
+        "cpuStatus": [],
+        "CPU": Number,
+        "uptime": String
     };
 
     let resData: any = {};
@@ -493,24 +509,22 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                                 conn.end();
                                 if (count === metricsArr.indexOf(k)) {
                                     // console.log(resData);
-                                    let DiskTotal = resData.DiskTotal;
-                                    let DiskFree = resData.DiskFree;
-                                    let MemTotal = ((resData.MemTotal / 1024) / 1024).toFixed(1) + 'G';
-                                    let MemAvailable = ((resData.MemAvailable / 1024) / 1024).toFixed(1) + 'G';
+                                    let DiskTotal = ((resData.DiskTotal / 1024) / 1024).toFixed(1);
+                                    let DiskFree = ((resData.DiskFree / 1024) / 1024).toFixed(1);
+                                    let MemTotal = ((resData.MemTotal / 1024) / 1024).toFixed(1);
+                                    let MemAvailable = ((resData.MemAvailable / 1024) / 1024).toFixed(1);
+                                    let CpuTotal = 100;
                                     let CpuUsage = resData.CpuUsage;
-                                    let CPU = resData.CPU + 'CPU';
+                                    let CPU = resData.CPU;
                                     let uptime = resData.uptime;
                                     let createdAt = new Date(); // ISO 8601 Date will saved to DB
 
                                     hostMetrics = {
-                                        "DiskTotal": DiskTotal,
-                                        "DiskFree": DiskFree,
-                                        "MemTotal": MemTotal,
-                                        "MemAvailable": MemAvailable,
-                                        "CpuUsage": CpuUsage,
+                                        "diskStatus": [createdAt, +DiskTotal, +DiskFree],
+                                        "memStatus": [createdAt, +MemTotal, +MemAvailable],
+                                        "cpuStatus": [createdAt, CpuTotal, +CpuUsage],
                                         "CPU": CPU,
-                                        "uptime": uptime,
-                                        "createdAt": createdAt
+                                        "uptime": uptime
                                     };
 
                                 }
@@ -522,14 +536,11 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                         });
                     }).on('error', (err) => {
                         hostMetrics = {
-                            "DiskTotal": "No Data",
-                            "DiskFree": "No Data",
-                            "MemTotal": "No Data",
-                            "MemAvailable": "No Data",
-                            "CpuUsage": "No Data",
+                            "diskStatus": [],
+                            "memStatus": [],
+                            "cpuStatus": [],
                             "CPU": 0,
-                            "uptime": "No Data",
-                            "createdAt": new Date()
+                            "uptime": "No Data"
                         };
                         console.log(`ssh: connect to host ${host} port ${port}: Connection refused`)
                     }).connect({

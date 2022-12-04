@@ -36,12 +36,9 @@ export interface ILinked {
 
 
 export interface IhostMetrics {
-  DiskTotal: string;
-  DiskFree: string;
-  MemTotal: string;
-  MemAvailable: string;
-  CpuUsage: string;
-  CPU: string;
+  diskStatus: [diskStatus: []];
+  memStatus: [memStatus: []];
+  cpuStatus: [cpuStatus: []];
+  CPU: number;
   uptime: string;
-  createdAt: Date;
 }
