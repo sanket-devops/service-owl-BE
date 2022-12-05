@@ -88,7 +88,7 @@ const allServiceHost = async () => {
                         let port = 22;
                         let username = item.userName;
                         let password = item.userPass;
-                        let keepMetrics = 5
+                        let keepMetrics = 13 // It will keep last 12 Metrics record. Every 5 min new Metrics array add. 
                         let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
                         // console.log(resHostMetrics)
                         item.hostMetrics = item.hostMetrics || [{
@@ -100,19 +100,22 @@ const allServiceHost = async () => {
                         }];
 
                         // Keep Array size fix and remove fist item
-                        // for (let arrayItem = 0; arrayItem < item.hostMetrics.length; arrayItem++) {
-                        //     console.log(item.hostMetrics[arrayItem])
-
-                            // for (let index = 0; index < item.hostMetrics[item].length; index++) {
-                            //     if (item.hostMetrics.length >= keepMetrics) {
-                            //         // console.log(item.hostMetrics.shift());
-                            //         // item.hostMetrics.shift();
-                            //         // item.hostMetrics.splice(1, 1);
-                            //         console.log("Array full")                                
-                            //     }
-                            // }
-                            
-                        // }
+                        for (let arrayItem = 0; arrayItem < item.hostMetrics[0].diskStatus.length; arrayItem++) {
+                            if (item.hostMetrics[0].diskStatus.length >= keepMetrics) {
+                                // console.log(item.hostMetrics[0].diskStatus.splice(1, 1));
+                                item.hostMetrics[0].diskStatus.splice(1, 1);
+                            }
+                        }
+                        for (let arrayItem = 0; arrayItem < item.hostMetrics[0].memStatus.length; arrayItem++) {
+                            if (item.hostMetrics[0].memStatus.length >= keepMetrics) {
+                                item.hostMetrics[0].memStatus.splice(1, 1);
+                            }
+                        }
+                        for (let arrayItem = 0; arrayItem < item.hostMetrics[0].cpuStatus.length; arrayItem++) {
+                            if (item.hostMetrics[0].cpuStatus.length >= keepMetrics) {
+                                item.hostMetrics[0].cpuStatus.splice(1, 1);
+                            }
+                        }
 
                         item.hostMetrics[0].diskStatus.push(resHostMetrics.diskStatus);
                         item.hostMetrics[0].memStatus.push(resHostMetrics.memStatus);
@@ -121,7 +124,7 @@ const allServiceHost = async () => {
                         item.hostMetrics[0].uptime = resHostMetrics.uptime;
                         let metricsData = item.hostMetrics
                         await owlModel.findOneAndUpdate({_id: item._id}, {$set: {hostMetrics: metricsData}}).exec();
-                        console.log(item.hostMetrics);
+                        // console.log(item.hostMetrics);
                         resolve();
                     }));
                 }
