@@ -39,6 +39,15 @@ export interface IhostMetrics {
   diskStatus: [diskStatus: []];
   memStatus: [memStatus: []];
   cpuStatus: [cpuStatus: []];
+  DiskTotal: number;
+  DiskUsage: number;
+  DiskFree: number;
+  MemTotal: number;
+  MemUsage: number;
+  MemFree: number;
+  CpuTotal: number;
+  CpuUsage: number;
+  CpuFree: number;
   CPU: number;
   uptime: string;
 }

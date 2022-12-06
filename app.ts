@@ -92,11 +92,20 @@ const allServiceHost = async () => {
                         let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
                         // console.log(resHostMetrics)
                         item.hostMetrics = item.hostMetrics || [{
-                            "diskStatus":[['Timestamp', 'DiskTotal', 'DiskFree']],
-                            "memStatus":[['Timestamp', 'MemTotal', 'MemAvailable']],
-                            "cpuStatus":[['Timestamp', 'CPUTotal', 'CpuUsage']],
+                            "diskStatus":[['Timestamp', 'Disk Total', 'Disk Usage', 'Disk Free']],
+                            "memStatus":[['Timestamp', 'Mem Total', 'Mem Usage', 'Mem Available']],
+                            "cpuStatus":[['Timestamp', 'CPU Total', 'CPU Usage', 'CPU Free']],
+                            "DiskTotal": Number,
+                            "DiskUsage": Number,
+                            "DiskFree": Number,
+                            "MemTotal": Number,
+                            "MemUsage": Number,
+                            "MemFree": Number,
+                            "CpuTotal": Number,
+                            "CpuUsage": Number,
+                            "CpuFree": Number,
                             "CPU": Number,
-                            "uptime": ''
+                            "uptime": String
                         }];
 
                         // Keep Array size fix and remove fist item
@@ -120,6 +129,15 @@ const allServiceHost = async () => {
                         item.hostMetrics[0].diskStatus.push(resHostMetrics.diskStatus);
                         item.hostMetrics[0].memStatus.push(resHostMetrics.memStatus);
                         item.hostMetrics[0].cpuStatus.push(resHostMetrics.cpuStatus);
+                        item.hostMetrics[0].DiskTotal = resHostMetrics.DiskTotal;
+                        item.hostMetrics[0].DiskUsage = resHostMetrics.DiskUsage;
+                        item.hostMetrics[0].DiskFree = resHostMetrics.DiskFree;
+                        item.hostMetrics[0].MemTotal = resHostMetrics.MemTotal;
+                        item.hostMetrics[0].MemUsage = resHostMetrics.MemUsage;
+                        item.hostMetrics[0].MemFree = resHostMetrics.MemFree;
+                        item.hostMetrics[0].CpuTotal = resHostMetrics.CpuTotal;
+                        item.hostMetrics[0].CpuUsage = resHostMetrics.CpuUsage;
+                        item.hostMetrics[0].CpuFree = resHostMetrics.CpuFree;
                         item.hostMetrics[0].CPU = resHostMetrics.CPU;
                         item.hostMetrics[0].uptime = resHostMetrics.uptime;
                         let metricsData = item.hostMetrics
@@ -218,12 +236,13 @@ allServiceHost();
 
 
 app.get('/', (req, res) => {
-    res.send(`service-owl is up and running...`);
+    res.send(`Service-Owl is up and running...`);
 })
 
 app.get('/hosts', async (req, res) => {
     try {
-        let hosts = await owlModel.find({}).sort({_id:-1});
+        // let hosts = await owlModel.find({}).sort({_id:-1});
+        let hosts = await owlModel.find({}).select('ipAddress hostName port linkTo groupName clusterName envName vmName note status hostMetrics hostCheck createdAt updatedAt').sort({_id:-1});
         res.send({data: getEncryptedData(hosts)});
     } catch (e) {
         res.status(500);
@@ -476,12 +495,12 @@ async function setHttpStatus(portObj, httpCheck: { path: string; hostname: strin
 
 async function sshHostMetrics(host: string, port: number, username: string, password: string) {
 
-    let metricsArr: string[] = ["DiskTotal", "DiskFree", "MemTotal", "MemAvailable", "CpuUsage", "CPU", "uptime"];
+    let metricsArr: string[] = ["DiskTotal", "DiskFree", "MemTotal", "MemFree", "CpuUsage", "CPU", "uptime"];
     let metricsCom: any = {
         DiskTotal: "df / | grep / | awk '{ print $2}'",
         DiskFree: "df / | grep / | awk '{ print $4}'",
         MemTotal: "cat /proc/meminfo | grep MemTotal | awk '{ print $2}'",
-        MemAvailable: "cat /proc/meminfo | grep MemAvailable | awk '{ print $2}'",
+        MemFree: "cat /proc/meminfo | grep MemFree | awk '{ print $2}'",
         CpuUsage: "top -bn2|grep '%Cpu'|tail -1|grep -P '(....|...) id,'|awk '{print 100-$8}'",
         CPU: "lscpu | grep 'CPU(s):' | awk 'FNR == 1 {print $2}'",
         uptime: "uptime -p | awk '{ print $2,$3,$4,$5 }'"
@@ -492,6 +511,15 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
         "diskStatus": [],
         "memStatus": [],
         "cpuStatus": [],
+        "DiskTotal": Number,
+        "DiskUsage": Number,
+        "DiskFree": Number,
+        "MemTotal": Number,
+        "MemUsage": Number,
+        "MemFree": Number,
+        "CpuTotal": Number,
+        "CpuUsage": Number,
+        "CpuFree": Number,
         "CPU": Number,
         "uptime": String
     };
@@ -514,18 +542,30 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                                     // console.log(resData);
                                     let DiskTotal = ((resData.DiskTotal / 1024) / 1024).toFixed(1);
                                     let DiskFree = ((resData.DiskFree / 1024) / 1024).toFixed(1);
+                                    let DiskUsage = (+DiskTotal - +DiskFree).toFixed(1);
                                     let MemTotal = ((resData.MemTotal / 1024) / 1024).toFixed(1);
-                                    let MemAvailable = ((resData.MemAvailable / 1024) / 1024).toFixed(1);
+                                    let MemFree = ((resData.MemFree / 1024) / 1024).toFixed(1);
+                                    let MemUsage = (+MemTotal - +MemFree).toFixed(1);
                                     let CpuTotal = 100;
                                     let CpuUsage = resData.CpuUsage;
+                                    let CpuFree = (CpuTotal - +CpuUsage).toFixed(1);
                                     let CPU = resData.CPU;
                                     let uptime = resData.uptime;
                                     let createdAt = new Date(); // ISO 8601 Date will saved to DB
 
                                     hostMetrics = {
-                                        "diskStatus": [createdAt, +DiskTotal, +DiskFree],
-                                        "memStatus": [createdAt, +MemTotal, +MemAvailable],
-                                        "cpuStatus": [createdAt, CpuTotal, +CpuUsage],
+                                        "diskStatus": [createdAt, +DiskTotal, +DiskUsage, +DiskFree],
+                                        "memStatus": [createdAt, +MemTotal, +MemUsage, +MemFree],
+                                        "cpuStatus": [createdAt, CpuTotal, +CpuUsage, +CpuFree],
+                                        "DiskTotal": (+DiskTotal).toFixed(0),
+                                        "DiskUsage": (+DiskUsage).toFixed(0),
+                                        "DiskFree": (+DiskFree).toFixed(0),
+                                        "MemTotal": (+MemTotal).toFixed(1),
+                                        "MemUsage": (+MemUsage).toFixed(1),
+                                        "MemFree": (+MemFree).toFixed(1),
+                                        "CpuTotal": (+CpuTotal).toFixed(0),
+                                        "CpuUsage": (+CpuUsage).toFixed(0),
+                                        "CpuFree": (+CpuFree).toFixed(0),
                                         "CPU": CPU,
                                         "uptime": uptime
                                     };
@@ -542,6 +582,15 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                             "diskStatus": [],
                             "memStatus": [],
                             "cpuStatus": [],
+                            "DiskTotal": 0,
+                            "DiskUsage": 0,
+                            "DiskFree": 0,
+                            "MemTotal": 0,
+                            "MemUsage": 0,
+                            "MemFree": 0,
+                            "CpuTotal": 0,
+                            "CpuUsage": 0,
+                            "CpuFree": 0,
                             "CPU": 0,
                             "uptime": "No Data"
                         };
