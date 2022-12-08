@@ -88,7 +88,7 @@ const allServiceHost = async () => {
                         let port = 22;
                         let username = item.userName;
                         let password = item.userPass;
-                        let keepMetrics = 13 // It will keep last 12 Metrics record. Every 5 min new Metrics array add. 
+                        let keepMetrics = 48  // It will keep last 24 Metrics record. Every 5 min new Metrics array add. 
                         let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
                         // console.log(resHostMetrics)
                         item.hostMetrics = item.hostMetrics || [{
@@ -110,18 +110,18 @@ const allServiceHost = async () => {
 
                         // Keep Array size fix and remove fist item
                         for (let arrayItem = 0; arrayItem < item.hostMetrics[0].diskStatus.length; arrayItem++) {
-                            if (item.hostMetrics[0].diskStatus.length >= keepMetrics) {
+                            if (item.hostMetrics[0].diskStatus.length >= (keepMetrics + 1)) {
                                 // console.log(item.hostMetrics[0].diskStatus.splice(1, 1));
                                 item.hostMetrics[0].diskStatus.splice(1, 1);
                             }
                         }
                         for (let arrayItem = 0; arrayItem < item.hostMetrics[0].memStatus.length; arrayItem++) {
-                            if (item.hostMetrics[0].memStatus.length >= keepMetrics) {
+                            if (item.hostMetrics[0].memStatus.length >= (keepMetrics + 1)) {
                                 item.hostMetrics[0].memStatus.splice(1, 1);
                             }
                         }
                         for (let arrayItem = 0; arrayItem < item.hostMetrics[0].cpuStatus.length; arrayItem++) {
-                            if (item.hostMetrics[0].cpuStatus.length >= keepMetrics) {
+                            if (item.hostMetrics[0].cpuStatus.length >= (keepMetrics + 1)) {
                                 item.hostMetrics[0].cpuStatus.splice(1, 1);
                             }
                         }
@@ -492,6 +492,24 @@ async function setHttpStatus(portObj, httpCheck: { path: string; hostname: strin
 
 }
 
+function toIsoString(date: any) {
+    var tzo = -date.getTimezoneOffset(),
+        dif = tzo >= 0 ? '+' : '-',
+        pad = function(num) {
+            return (num < 10 ? '0' : '') + num;
+        };
+  
+    return date.getFullYear() +
+        '-' + pad(date.getMonth() + 1) +
+        '-' + pad(date.getDate()) +
+        'T' + pad(date.getHours()) +
+        ':' + pad(date.getMinutes()) +
+        ':' + pad(date.getSeconds())
+        // dif + pad(Math.floor(Math.abs(tzo) / 60)) +
+        // ':' + pad(Math.abs(tzo) % 60);
+  }
+let dt = new Date();
+console.log(toIsoString(dt));
 
 async function sshHostMetrics(host: string, port: number, username: string, password: string) {
 
@@ -551,7 +569,8 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                                     let CpuFree = (CpuTotal - +CpuUsage).toFixed(1);
                                     let CPU = resData.CPU;
                                     let uptime = resData.uptime;
-                                    let createdAt = new Date(); // ISO 8601 Date will saved to DB
+                                    // let createdAt = new Date(); // ISO 8601 Date will saved to DB
+                                    let createdAt = toIsoString(dt); // ISO 8601 Date will saved to DB
 
                                     hostMetrics = {
                                         "diskStatus": [createdAt, +DiskTotal, +DiskUsage, +DiskFree],
