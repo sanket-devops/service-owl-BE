@@ -88,7 +88,7 @@ const allServiceHost = async () => {
                         let port = 22;
                         let username = item.userName;
                         let password = item.userPass;
-                        let keepMetrics = 48  // It will keep last 24 Metrics record. Every 5 min new Metrics array add. 
+                        let keepMetrics = 24  // It will keep last 24 Metrics record. Every 5 min new Metrics array add. 
                         let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
                         // console.log(resHostMetrics)
                         item.hostMetrics = item.hostMetrics || [{
@@ -242,8 +242,18 @@ app.get('/', (req, res) => {
 app.get('/hosts', async (req, res) => {
     try {
         // let hosts = await owlModel.find({}).sort({_id:-1});
-        let hosts = await owlModel.find({}).select('ipAddress hostName port linkTo groupName clusterName envName vmName note status hostMetrics hostCheck createdAt updatedAt').sort({_id:-1});
+        let hosts = await owlModel.find({}).select('ipAddress hostName port linkTo groupName clusterName envName vmName note status hostCheck createdAt updatedAt').sort({_id:-1});
         res.send({data: getEncryptedData(hosts)});
+    } catch (e) {
+        res.status(500);
+    }
+});
+
+app.get('/hosts/hostMetrics/:postId', async (req: any, res) => {
+    try {
+        let hostData = await owlModel.findOne({_id: req.params.postId});
+        let hostMetrics = hostData.hostMetrics[0];
+        res.send({data: getEncryptedData(hostMetrics)});
     } catch (e) {
         res.status(500);
     }
@@ -508,8 +518,8 @@ function toIsoString(date: any) {
         // dif + pad(Math.floor(Math.abs(tzo) / 60)) +
         // ':' + pad(Math.abs(tzo) % 60);
   }
-let dt = new Date();
-console.log(toIsoString(dt));
+// let dt = new Date();
+// console.log(toIsoString(dt));
 
 async function sshHostMetrics(host: string, port: number, username: string, password: string) {
 
@@ -541,7 +551,9 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
         "CPU": Number,
         "uptime": String
     };
-
+    let dt = new Date();
+    let createdAt = toIsoString(dt); // ISO 8601 Date will saved to DB
+    
     let resData: any = {};
     for (let k of metricsArr) {
         let resDataPromiseArr: any = [];
@@ -570,7 +582,8 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                                     let CPU = resData.CPU;
                                     let uptime = resData.uptime;
                                     // let createdAt = new Date(); // ISO 8601 Date will saved to DB
-                                    let createdAt = toIsoString(dt); // ISO 8601 Date will saved to DB
+                                    // let dt = new Date();
+                                    // let createdAt = toIsoString(dt); // ISO 8601 Date will saved to DB
 
                                     hostMetrics = {
                                         "diskStatus": [createdAt, +DiskTotal, +DiskUsage, +DiskFree],
@@ -596,11 +609,11 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                                 resData[k] = await output.replace(/\n/g, '');
                             });
                         });
-                    }).on('error', (err) => {
+                    }).on('error', (err: any) => {
                         hostMetrics = {
-                            "diskStatus": [],
-                            "memStatus": [],
-                            "cpuStatus": [],
+                            "diskStatus": [createdAt, 0, 0, 0],
+                            "memStatus": [createdAt, 0, 0, 0],
+                            "cpuStatus": [createdAt, 0, 0, 0],
                             "DiskTotal": 0,
                             "DiskUsage": 0,
                             "DiskFree": 0,
@@ -611,7 +624,7 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                             "CpuUsage": 0,
                             "CpuFree": 0,
                             "CPU": 0,
-                            "uptime": "No Data"
+                            "uptime": `ssh: connect to host ${host} port ${port}: Connection refused`
                         };
                         console.log(`ssh: connect to host ${host} port ${port}: Connection refused`)
                     }).connect({
@@ -625,8 +638,8 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
         );
         await Promise.all(resDataPromiseArr);
     }
-    // console.log(hostMetrics);
-    return hostMetrics;
+    // console.log(await hostMetrics);
+    return await hostMetrics;
 }
 
 
