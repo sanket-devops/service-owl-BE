@@ -253,6 +253,25 @@ app.get('/hosts/hostMetrics/:postId', async (req: any, res) => {
     try {
         let hostData = await owlModel.findOne({_id: req.params.postId});
         let hostMetrics = hostData.hostMetrics[0];
+        if(hostMetrics === undefined){
+            hostMetrics = {
+                "diskStatus": [['Timestamp', 'Disk Total', 'Disk Usage', 'Disk Free'], [0, 0, 0, 0]],
+                "memStatus": [['Timestamp', 'Mem Total', 'Mem Usage', 'Mem Available'], [0, 0, 0, 0]],
+                "cpuStatus": [['Timestamp', 'CPU Total', 'CPU Usage', 'CPU Free'], [0, 0, 0, 0]],
+                "DiskTotal": 0,
+                "DiskUsage": 0,
+                "DiskFree": 0,
+                "MemTotal": 0,
+                "MemUsage": 0,
+                "MemFree": 0,
+                "CpuTotal": 0,
+                "CpuUsage": 0,
+                "CpuFree": 0,
+                "CPU": 0,
+                "uptime": `ssh: connect to host port : Connection refused`
+                };
+        }
+        // console.log(hostMetrics)
         res.send({data: getEncryptedData(hostMetrics)});
     } catch (e) {
         res.status(500);
