@@ -88,7 +88,7 @@ const allServiceHost = async () => {
                         let port = 22;
                         let username = item.userName;
                         let password = item.userPass;
-                        let keepMetrics = 24  // It will keep last 24 Metrics record. Every 5 min new Metrics array add. 
+                        let keepMetrics = 48  // It will keep last 48 Metrics record. Every 5 min new Metrics array added. 
                         let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
                         // console.log(resHostMetrics)
                         item.hostMetrics = item.hostMetrics || [{
