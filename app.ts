@@ -88,7 +88,7 @@ const allServiceHost = async () => {
                         let port = 22;
                         let username = item.userName;
                         let password = item.userPass;
-                        let keepMetrics = 48  // It will keep last 48 Metrics record. Every 5 min new Metrics array added. 
+                        let keepMetrics = 120  // It will keep last 48 Metrics record. Every 5 min new Metrics array added. 
                         let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
                         // console.log(resHostMetrics)
                         item.hostMetrics = item.hostMetrics || [{
@@ -242,7 +242,7 @@ app.get('/', (req, res) => {
 app.get('/hosts', async (req, res) => {
     try {
         // let hosts = await owlModel.find({}).sort({_id:-1});
-        let hosts = await owlModel.find({}).select('ipAddress hostName port linkTo groupName clusterName envName vmName note status hostCheck createdAt updatedAt').sort({_id:-1});
+        let hosts = await owlModel.find({}).select('ipAddress hostName port hostMetrics.DiskFree hostMetrics.MemFree hostMetrics.CpuUsage linkTo groupName clusterName envName vmName note status hostCheck createdAt updatedAt').sort({_id:-1});
         res.send({data: getEncryptedData(hosts)});
     } catch (e) {
         res.status(500);
