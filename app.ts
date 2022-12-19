@@ -90,7 +90,7 @@ const allServiceHost = async () => {
                         let password = item.userPass;
                         let keepMetrics = 120  // It will keep last 48 Metrics record. Every 5 min new Metrics array added. 
                         let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
-                        // console.log(resHostMetrics)
+                        // console.log(resHostMetrics);
                         item.hostMetrics = item.hostMetrics || [{
                             "diskStatus":[['Timestamp', 'Disk Total', 'Disk Usage', 'Disk Free']],
                             "memStatus":[['Timestamp', 'Mem Total', 'Mem Usage', 'Mem Available']],
@@ -142,7 +142,7 @@ const allServiceHost = async () => {
                         item.hostMetrics[0].uptime = resHostMetrics.uptime;
                         let metricsData = item.hostMetrics
                         await owlModel.findOneAndUpdate({_id: item._id}, {$set: {hostMetrics: metricsData}}).exec();
-                        // console.log(item.hostMetrics);
+                        // console.log(metricsData);
                         resolve();
                     }));
                 }
@@ -572,9 +572,10 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
     };
     let dt = new Date();
     let createdAt = toIsoString(dt); // ISO 8601 Date will saved to DB
-    
     let resData: any = {};
+    let sshConnected: boolean = false;
     for (let k of metricsArr) {
+        sshConnected = true;
         let resDataPromiseArr: any = [];
         resDataPromiseArr.push(
             new Promise(async (resolve: any, reject: any) => {
@@ -628,7 +629,8 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                                 resData[k] = await output.replace(/\n/g, '');
                             });
                         });
-                    }).on('error', (err: any) => {
+                    }).on('error', async(err: any) => {
+                        // console.log(`ssh: connect to host ${host} port ${port}: Connection refused`)
                         hostMetrics = {
                             "diskStatus": [createdAt, 0, 0, 0],
                             "memStatus": [createdAt, 0, 0, 0],
@@ -645,7 +647,8 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                             "CPU": 0,
                             "uptime": `ssh: connect to host ${host} port ${port}: Connection refused`
                         };
-                        console.log(`ssh: connect to host ${host} port ${port}: Connection refused`)
+                        sshConnected = false;
+                        resolve();
                     }).connect({
                         host: host,
                         port: port,
@@ -656,6 +659,9 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
             })
         );
         await Promise.all(resDataPromiseArr);
+        if (!sshConnected) {
+            break;
+        }
     }
     // console.log(await hostMetrics);
     return await hostMetrics;
