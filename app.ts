@@ -88,13 +88,14 @@ const allServiceHost = async () => {
                         let port = 22;
                         let username = item.userName;
                         let password = item.userPass;
-                        let keepMetrics = 120  // It will keep last 48 Metrics record. Every 5 min new Metrics array added. 
+                        // let keepMetrics = 288 //24H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                        let keepMetrics = 576 //48H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove. 
                         let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
                         // console.log(resHostMetrics);
                         item.hostMetrics = item.hostMetrics || [{
-                            "diskStatus":[['Timestamp', 'Disk Total', 'Disk Usage', 'Disk Free']],
-                            "memStatus":[['Timestamp', 'Mem Total', 'Mem Usage', 'Mem Available']],
-                            "cpuStatus":[['Timestamp', 'CPU Total', 'CPU Usage', 'CPU Free']],
+                            "diskStatus":[],
+                            "memStatus":[],
+                            "cpuStatus":[],
                             "DiskTotal": Number,
                             "DiskUsage": Number,
                             "DiskFree": Number,
@@ -110,19 +111,19 @@ const allServiceHost = async () => {
 
                         // Keep Array size fix and remove fist item
                         for (let arrayItem = 0; arrayItem < item.hostMetrics[0].diskStatus.length; arrayItem++) {
-                            if (item.hostMetrics[0].diskStatus.length >= (keepMetrics + 1)) {
+                            if (item.hostMetrics[0].diskStatus.length >= (keepMetrics)) {
                                 // console.log(item.hostMetrics[0].diskStatus.splice(1, 1));
-                                item.hostMetrics[0].diskStatus.splice(1, 1);
+                                item.hostMetrics[0].diskStatus.splice(0, 1);
                             }
                         }
                         for (let arrayItem = 0; arrayItem < item.hostMetrics[0].memStatus.length; arrayItem++) {
-                            if (item.hostMetrics[0].memStatus.length >= (keepMetrics + 1)) {
-                                item.hostMetrics[0].memStatus.splice(1, 1);
+                            if (item.hostMetrics[0].memStatus.length >= (keepMetrics)) {
+                                item.hostMetrics[0].memStatus.splice(0, 1);
                             }
                         }
                         for (let arrayItem = 0; arrayItem < item.hostMetrics[0].cpuStatus.length; arrayItem++) {
-                            if (item.hostMetrics[0].cpuStatus.length >= (keepMetrics + 1)) {
-                                item.hostMetrics[0].cpuStatus.splice(1, 1);
+                            if (item.hostMetrics[0].cpuStatus.length >= (keepMetrics)) {
+                                item.hostMetrics[0].cpuStatus.splice(0, 1);
                             }
                         }
 
