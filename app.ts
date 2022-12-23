@@ -88,8 +88,13 @@ const allServiceHost = async () => {
                         let port = 22;
                         let username = item.userName;
                         let password = item.userPass;
+
                         // let keepMetrics = 288 //24H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
-                        let keepMetrics = 576 //48H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove. 
+                        // let keepMetrics = 576 //48H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                        let keepMetrics = 2016 //7 days (1 week) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                        // let keepMetrics = 8640 //30 days (1 Month) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                        // let keepMetrics = 25920 //90 days (3 Months) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+
                         let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
                         // console.log(resHostMetrics);
                         item.hostMetrics = item.hostMetrics || [{
@@ -243,7 +248,7 @@ app.get('/', (req, res) => {
 app.get('/hosts', async (req, res) => {
     try {
         // let hosts = await owlModel.find({}).sort({_id:-1});
-        let hosts = await owlModel.find({}).select('ipAddress hostName port hostMetrics.DiskFree hostMetrics.MemFree hostMetrics.CpuUsage linkTo groupName clusterName envName vmName note status hostCheck createdAt updatedAt').sort({_id:-1});
+        let hosts = await owlModel.find({}).select('ipAddress hostName port hostMetrics.DiskFree hostMetrics.MemFree hostMetrics.CpuUsage linkTo userName userPass groupName clusterName envName vmName note status hostCheck createdAt updatedAt').sort({_id:-1});
         res.send({data: getEncryptedData(hosts)});
     } catch (e) {
         res.status(500);
