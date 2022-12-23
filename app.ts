@@ -636,6 +636,7 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                             });
                         });
                     }).on('error', async(err: any) => {
+                        console.log(err);
                         // console.log(`ssh: connect to host ${host} port ${port}: Connection refused`)
                         hostMetrics = {
                             "diskStatus": [createdAt, 0, 0, 0],
