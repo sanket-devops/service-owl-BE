@@ -80,6 +80,13 @@ const allServiceHost = async () => {
                 let downCount = 0;
                 let portsPromiseArr: Promise<any>[] = [];
                 let hostMetricsPromiseArr: Promise<any>[] = [];
+                if (item._id && item.userName && item.userPass) {
+                    hostMetricsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
+                        // item.metricsCheck = true;
+                        await owlModel.findOneAndUpdate({_id: item._id}, {$set: {metricsCheck: true}}).exec();
+                        resolve();
+                    }));
+                }
                 if (item.metricsCheck) {
                     if (item._id && item.userName && item.userPass) {
                         hostMetricsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
@@ -637,7 +644,7 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                         });
                     }).on('error', async(err: any) => {
                         console.log(err);
-                        console.log(`ssh: connect to host ${host} port ${port}: Connection refused`)
+                        console.log(`Error: => ssh: connect to host ${host} port ${port}: Connection refused`)
                         hostMetrics = {
                             "diskStatus": [createdAt, 0, 0, 0],
                             "memStatus": [createdAt, 0, 0, 0],
