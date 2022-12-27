@@ -80,13 +80,6 @@ const allServiceHost = async () => {
                 let downCount = 0;
                 let portsPromiseArr: Promise<any>[] = [];
                 let hostMetricsPromiseArr: Promise<any>[] = [];
-                if (item._id && item.userName && item.userPass) {
-                    hostMetricsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
-                        // item.metricsCheck = true;
-                        await owlModel.findOneAndUpdate({_id: item._id}, {$set: {metricsCheck: true}}).exec();
-                        resolve();
-                    }));
-                }
                 if (item.metricsCheck) {
                     if (item._id && item.userName && item.userPass) {
                         hostMetricsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
