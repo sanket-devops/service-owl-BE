@@ -68,7 +68,7 @@ const allServiceHost = async () => {
     console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Start =>`, counter,`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
     isOwlChekcing = true;
     let startDate = new Date().getTime();
-    let allData: Idashboard[] = <any>await owlModel.find({}).select('ipAddress userName userPass hostName port hostMetrics hostCheck').lean().exec();
+    let allData: Idashboard[] = <any>await owlModel.find({}).select('ipAddress userName userPass hostName port hostMetrics hostCheck metricsCheck').lean().exec();
     allData = JSON.parse(JSON.stringify(allData));
     let servicesPromiseArr: Promise<any>[] = [];
     // loop services
@@ -80,79 +80,79 @@ const allServiceHost = async () => {
                 let downCount = 0;
                 let portsPromiseArr: Promise<any>[] = [];
                 let hostMetricsPromiseArr: Promise<any>[] = [];
-
-                if (item._id && item.userName && item.userPass) {
-                    hostMetricsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
-
-                        let host = item.ipAddress;
-                        let port = 22;
-                        let username = item.userName;
-                        let password = item.userPass;
-
-                        // let keepMetrics = 288 //24H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
-                        // let keepMetrics = 576 //48H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
-                        let keepMetrics = 2016 //7 days (1 week) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
-                        // let keepMetrics = 8640 //30 days (1 Month) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
-                        // let keepMetrics = 25920 //90 days (3 Months) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
-
-                        let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
-                        // console.log(resHostMetrics);
-                        item.hostMetrics = item.hostMetrics || [{
-                            "diskStatus":[],
-                            "memStatus":[],
-                            "cpuStatus":[],
-                            "DiskTotal": Number,
-                            "DiskUsage": Number,
-                            "DiskFree": Number,
-                            "MemTotal": Number,
-                            "MemUsage": Number,
-                            "MemFree": Number,
-                            "CpuTotal": Number,
-                            "CpuUsage": Number,
-                            "CpuFree": Number,
-                            "CPU": Number,
-                            "uptime": String
-                        }];
-
-                        // Keep Array size fix and remove fist item
-                        for (let arrayItem = 0; arrayItem < item.hostMetrics[0].diskStatus.length; arrayItem++) {
-                            if (item.hostMetrics[0].diskStatus.length >= (keepMetrics)) {
-                                // console.log(item.hostMetrics[0].diskStatus.splice(1, 1));
-                                item.hostMetrics[0].diskStatus.splice(0, 1);
+                if (item.metricsCheck) {
+                    if (item._id && item.userName && item.userPass) {
+                        hostMetricsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
+    
+                            let host = item.ipAddress;
+                            let port = 22;
+                            let username = item.userName;
+                            let password = item.userPass;
+    
+                            // let keepMetrics = 288 //24H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                            // let keepMetrics = 576 //48H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                            let keepMetrics = 2016 //7 days (1 week) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                            // let keepMetrics = 8640 //30 days (1 Month) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                            // let keepMetrics = 25920 //90 days (3 Months) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+    
+                            let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
+                            // console.log(resHostMetrics);
+                            item.hostMetrics = item.hostMetrics || [{
+                                "diskStatus":[],
+                                "memStatus":[],
+                                "cpuStatus":[],
+                                "DiskTotal": Number,
+                                "DiskUsage": Number,
+                                "DiskFree": Number,
+                                "MemTotal": Number,
+                                "MemUsage": Number,
+                                "MemFree": Number,
+                                "CpuTotal": Number,
+                                "CpuUsage": Number,
+                                "CpuFree": Number,
+                                "CPU": Number,
+                                "uptime": String
+                            }];
+    
+                            // Keep Array size fix and remove fist item
+                            for (let arrayItem = 0; arrayItem < item.hostMetrics[0].diskStatus.length; arrayItem++) {
+                                if (item.hostMetrics[0].diskStatus.length >= (keepMetrics)) {
+                                    // console.log(item.hostMetrics[0].diskStatus.splice(1, 1));
+                                    item.hostMetrics[0].diskStatus.splice(0, 1);
+                                }
                             }
-                        }
-                        for (let arrayItem = 0; arrayItem < item.hostMetrics[0].memStatus.length; arrayItem++) {
-                            if (item.hostMetrics[0].memStatus.length >= (keepMetrics)) {
-                                item.hostMetrics[0].memStatus.splice(0, 1);
+                            for (let arrayItem = 0; arrayItem < item.hostMetrics[0].memStatus.length; arrayItem++) {
+                                if (item.hostMetrics[0].memStatus.length >= (keepMetrics)) {
+                                    item.hostMetrics[0].memStatus.splice(0, 1);
+                                }
                             }
-                        }
-                        for (let arrayItem = 0; arrayItem < item.hostMetrics[0].cpuStatus.length; arrayItem++) {
-                            if (item.hostMetrics[0].cpuStatus.length >= (keepMetrics)) {
-                                item.hostMetrics[0].cpuStatus.splice(0, 1);
+                            for (let arrayItem = 0; arrayItem < item.hostMetrics[0].cpuStatus.length; arrayItem++) {
+                                if (item.hostMetrics[0].cpuStatus.length >= (keepMetrics)) {
+                                    item.hostMetrics[0].cpuStatus.splice(0, 1);
+                                }
                             }
-                        }
-
-                        item.hostMetrics[0].diskStatus.push(resHostMetrics.diskStatus);
-                        item.hostMetrics[0].memStatus.push(resHostMetrics.memStatus);
-                        item.hostMetrics[0].cpuStatus.push(resHostMetrics.cpuStatus);
-                        item.hostMetrics[0].DiskTotal = resHostMetrics.DiskTotal;
-                        item.hostMetrics[0].DiskUsage = resHostMetrics.DiskUsage;
-                        item.hostMetrics[0].DiskFree = resHostMetrics.DiskFree;
-                        item.hostMetrics[0].MemTotal = resHostMetrics.MemTotal;
-                        item.hostMetrics[0].MemUsage = resHostMetrics.MemUsage;
-                        item.hostMetrics[0].MemFree = resHostMetrics.MemFree;
-                        item.hostMetrics[0].CpuTotal = resHostMetrics.CpuTotal;
-                        item.hostMetrics[0].CpuUsage = resHostMetrics.CpuUsage;
-                        item.hostMetrics[0].CpuFree = resHostMetrics.CpuFree;
-                        item.hostMetrics[0].CPU = resHostMetrics.CPU;
-                        item.hostMetrics[0].uptime = resHostMetrics.uptime;
-                        let metricsData = item.hostMetrics
-                        await owlModel.findOneAndUpdate({_id: item._id}, {$set: {hostMetrics: metricsData}}).exec();
-                        // console.log(metricsData);
-                        resolve();
-                    }));
+    
+                            item.hostMetrics[0].diskStatus.push(resHostMetrics.diskStatus);
+                            item.hostMetrics[0].memStatus.push(resHostMetrics.memStatus);
+                            item.hostMetrics[0].cpuStatus.push(resHostMetrics.cpuStatus);
+                            item.hostMetrics[0].DiskTotal = resHostMetrics.DiskTotal;
+                            item.hostMetrics[0].DiskUsage = resHostMetrics.DiskUsage;
+                            item.hostMetrics[0].DiskFree = resHostMetrics.DiskFree;
+                            item.hostMetrics[0].MemTotal = resHostMetrics.MemTotal;
+                            item.hostMetrics[0].MemUsage = resHostMetrics.MemUsage;
+                            item.hostMetrics[0].MemFree = resHostMetrics.MemFree;
+                            item.hostMetrics[0].CpuTotal = resHostMetrics.CpuTotal;
+                            item.hostMetrics[0].CpuUsage = resHostMetrics.CpuUsage;
+                            item.hostMetrics[0].CpuFree = resHostMetrics.CpuFree;
+                            item.hostMetrics[0].CPU = resHostMetrics.CPU;
+                            item.hostMetrics[0].uptime = resHostMetrics.uptime;
+                            let metricsData = item.hostMetrics
+                            await owlModel.findOneAndUpdate({_id: item._id}, {$set: {hostMetrics: metricsData}}).exec();
+                            // console.log(metricsData);
+                            resolve();
+                        }));
+                    }
                 }
-
                 for (let i = 0; i < item.port.length; i++) {
                     portsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
                         let portObj = item.port[i];
@@ -248,7 +248,7 @@ app.get('/', (req, res) => {
 app.get('/hosts', async (req, res) => {
     try {
         // let hosts = await owlModel.find({}).sort({_id:-1});
-        let hosts = await owlModel.find({}).select('ipAddress hostName port hostMetrics.DiskFree hostMetrics.MemFree hostMetrics.CpuUsage linkTo userName userPass groupName clusterName envName vmName note status hostCheck createdAt updatedAt').sort({_id:-1});
+        let hosts = await owlModel.find({}).select('ipAddress hostName port hostMetrics.DiskFree hostMetrics.MemFree hostMetrics.CpuUsage linkTo userName userPass groupName clusterName envName vmName note status hostCheck metricsCheck createdAt updatedAt').sort({_id:-1});
         res.send({data: getEncryptedData(hosts)});
     } catch (e) {
         res.status(500);
@@ -637,7 +637,7 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                         });
                     }).on('error', async(err: any) => {
                         console.log(err);
-                        // console.log(`ssh: connect to host ${host} port ${port}: Connection refused`)
+                        console.log(`ssh: connect to host ${host} port ${port}: Connection refused`)
                         hostMetrics = {
                             "diskStatus": [createdAt, 0, 0, 0],
                             "memStatus": [createdAt, 0, 0, 0],

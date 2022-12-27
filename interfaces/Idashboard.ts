@@ -2,6 +2,7 @@ import {ICore} from './Icore';
 
 export interface Idashboard extends ICore {
   hostCheck: boolean,
+  metricsCheck: boolean,
   hostName: string,
   ipAddress: string,
   userName: string,

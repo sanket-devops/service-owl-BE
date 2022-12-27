@@ -5,6 +5,7 @@ const Schema = mongoose.Schema;
 
 const OwlSchema = new Schema({
     hostCheck: Boolean,
+    metricsCheck: Boolean,
     hostName: String,
     ipAddress: String,
     userName: String,
