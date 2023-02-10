@@ -23,4 +23,15 @@ const OwlSchema = new Schema({
     // http://mongoosejs.com/docs/guide.html#timestamps
     timestamps: true
 });
-module.exports = mongoose.model('service-host', OwlSchema);
+
+const InternetSchema = new Schema({
+    speedTest: []
+}, {
+    // http://mongoosejs.com/docs/guide.html#timestamps
+    timestamps: true
+});
+
+const serviceHost = mongoose.model('service-host', OwlSchema);
+const speedTest = mongoose.model('speed-test', InternetSchema);
+
+module.exports = {serviceHost, speedTest}

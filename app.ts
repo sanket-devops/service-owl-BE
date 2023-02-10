@@ -1,4 +1,4 @@
-import {IhostMetrics, Idashboard, IPort} from './interfaces/Idashboard';
+import {IhostMetrics, Idashboard, IPort, Ispeedtest} from './interfaces/Idashboard';
 import {EStatus} from './interfaces/enums/EStatus';
 import { table, getBorderCharacters } from 'table';
 import Fastify from 'fastify'
@@ -7,6 +7,8 @@ import moment from 'moment';
 import * as http from 'http';
 import * as https from 'https';
 import { Client } from 'ssh2';
+
+import { exec } from 'child_process';
 
 process.on('unhandledRejection', (error: Error, promise) => {
     console.log(error);
@@ -33,8 +35,7 @@ const hostname = '0.0.0.0';
 const port = 8002;
 let owlModel = require('./owl.model');
 let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.120.135:27017/service-owl?authSource=admin';
-// let db = 'mongodb://admin:admin@192.168.10.166:32717/service-owl?authSource=admin';
-// let db = 'mongodb://localhost:27017/service-owl?authSource=admin';
+// let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.10.108:27017/service-owl?authSource=admin';
 let allData = [];
 let nodemailer = require('nodemailer');
 
@@ -68,7 +69,7 @@ const allServiceHost = async () => {
     console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Start =>`, counter,`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
     isOwlChekcing = true;
     let startDate = new Date().getTime();
-    let allData: Idashboard[] = <any>await owlModel.find({}).select('ipAddress userName userPass hostName port hostMetrics hostCheck metricsCheck').lean().exec();
+    let allData: Idashboard[] = <any>await owlModel.serviceHost.find({}).select('ipAddress userName userPass hostName port hostMetrics hostCheck metricsCheck').lean().exec();
     allData = JSON.parse(JSON.stringify(allData));
     let servicesPromiseArr: Promise<any>[] = [];
     // loop services
@@ -147,7 +148,7 @@ const allServiceHost = async () => {
                             item.hostMetrics[0].CPU = resHostMetrics.CPU;
                             item.hostMetrics[0].uptime = resHostMetrics.uptime;
                             let metricsData = item.hostMetrics
-                            await owlModel.findOneAndUpdate({_id: item._id}, {$set: {hostMetrics: metricsData}}).exec();
+                            await owlModel.serviceHost.findOneAndUpdate({_id: item._id}, {$set: {hostMetrics: metricsData}}).exec();
                             // console.log(metricsData);
                             resolve();
                         }));
@@ -217,11 +218,11 @@ const allServiceHost = async () => {
                     }));
                 }
                 await Promise.all(portsPromiseArr);
-                await owlModel.findOneAndUpdate({_id: item._id}, {$set: {port: item.port}}).exec();
+                await owlModel.serviceHost.findOneAndUpdate({_id: item._id}, {$set: {port: item.port}}).exec();
 
-                if (upCount === item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'UP'}}).exec();
-                else if (downCount === item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'DOWN'}}).exec();
-                else if (upCount !== item.port.length && downCount !== item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'S_DOWN'}}).exec();
+                if (upCount === item.port.length) await owlModel.serviceHost.findOneAndUpdate({_id: item._id}, {$set: {status: 'UP'}}).exec();
+                else if (downCount === item.port.length) await owlModel.serviceHost.findOneAndUpdate({_id: item._id}, {$set: {status: 'DOWN'}}).exec();
+                else if (upCount !== item.port.length && downCount !== item.port.length) await owlModel.serviceHost.findOneAndUpdate({_id: item._id}, {$set: {status: 'S_DOWN'}}).exec();
                 resolve();
             }));
         }else {
@@ -238,7 +239,7 @@ const allServiceHost = async () => {
 }
 // setTimeout(allServiceHost(), 10000);
 setInterval(allServiceHost, 60000 * 5);
-allServiceHost();
+// allServiceHost();
 
 
 app.get('/', (req, res) => {
@@ -247,8 +248,8 @@ app.get('/', (req, res) => {
 
 app.get('/hosts', async (req, res) => {
     try {
-        // let hosts = await owlModel.find({}).sort({_id:-1});
-        let hosts = await owlModel.find({}).select('ipAddress hostName port hostMetrics.DiskFree hostMetrics.MemFree hostMetrics.CpuUsage linkTo userName userPass groupName clusterName envName vmName note status hostCheck metricsCheck createdAt updatedAt').sort({_id:-1});
+        // let hosts = await owlModel.serviceHost.find({}).sort({_id:-1});
+        let hosts = await owlModel.serviceHost.find({}).select('ipAddress hostName port hostMetrics.DiskFree hostMetrics.MemFree hostMetrics.CpuUsage linkTo userName userPass groupName clusterName envName vmName note status hostCheck metricsCheck createdAt updatedAt').sort({_id:-1});
         res.send({data: getEncryptedData(hosts)});
     } catch (e) {
         res.status(500);
@@ -257,7 +258,7 @@ app.get('/hosts', async (req, res) => {
 
 app.get('/hosts/hostMetrics/:postId', async (req: any, res) => {
     try {
-        let hostData = await owlModel.findOne({_id: req.params.postId});
+        let hostData = await owlModel.serviceHost.findOne({_id: req.params.postId});
         let hostMetrics = hostData.hostMetrics[0];
         if(hostMetrics === undefined){
             hostMetrics = {
@@ -309,7 +310,7 @@ app.post('/hosts/host-save', async (req: any, res) => {
 //get byId
 app.get('/hosts/:postId', async (req: any, res) => {
     try {
-        let post = await owlModel.findOne({_id: req.params.postId});
+        let post = await owlModel.serviceHost.findOne({_id: req.params.postId});
         res.send(post);
     } catch (e) {
         res.status(500);
@@ -321,13 +322,13 @@ app.put('/hosts/update', async (req: any, res) => {
     try {
         let tempData = JSON.parse(getDecryptedData(req.body.data));
         let id = getDecryptedData(req.body.id);
-        let post = await owlModel.findByIdAndUpdate({_id: id}, tempData, {new: true, runValidator: true});
+        let post = await owlModel.serviceHost.findByIdAndUpdate({_id: id}, tempData, {new: true, runValidator: true});
         res.send(post);
         let doUpdate = async() => {
             if (isOwlChekcing) {
                 setTimeout(doUpdate, 1000);
             } else {
-                await owlModel.findByIdAndUpdate({_id: id}, tempData, {new: true, runValidator: true});
+                await owlModel.serviceHost.findByIdAndUpdate({_id: id}, tempData, {new: true, runValidator: true});
             }
            }
         doUpdate();
@@ -339,7 +340,7 @@ app.put('/hosts/update', async (req: any, res) => {
 //delete
 app.post('/hosts/host-delete', async (req: any, res) => {
     try {
-        let post = await owlModel.findByIdAndRemove({
+        let post = await owlModel.serviceHost.findByIdAndRemove({
             _id: getDecryptedData(req.body.data)
         });
         res.send(post);
@@ -352,7 +353,7 @@ app.post('/hosts/host-delete', async (req: any, res) => {
 let localStorageData: Idashboard[];
 
 async function compareStatus() {
-    let res: Idashboard[] = JSON.parse(JSON.stringify(await owlModel.find({}).lean().exec()));
+    let res: Idashboard[] = JSON.parse(JSON.stringify(await owlModel.serviceHost.find({}).lean().exec()));
     let oldDashboard = localStorageData
     let downHostServices: any = [];
     if (oldDashboard && oldDashboard.length) {
@@ -674,6 +675,54 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
     return await hostMetrics;
 }
 
+async function speedTest() {
+    let speedTestData: Ispeedtest[] = <any>await owlModel.speedTest.find({}).select('speedTest').lean().exec();
+    speedTestData = JSON.parse(JSON.stringify(speedTestData));
+    let speedtest: any = [];
+    let data:any = [];
+    let resDataPromiseArr: any = [];
+    resDataPromiseArr.push(
+        new Promise(async (resolve: any, reject: any) => {
+    exec('speedtest --format=json', (error, stdout, stderr) => {
+        if (error) {
+          console.error(`exec error: ${error}`);
+          return;
+        }
+        speedtest.push(stdout);
+        resolve()
+        // console.log(stdout);
+        if (stderr!= "")
+        console.error(`stderr: ${stderr}`);
+      });
+    })
+    )
+
+    await Promise.all(resDataPromiseArr);
+    speedtest.forEach(element => {
+        let tempData = JSON.parse(element);
+        data.push(tempData.timestamp)
+        data.push((tempData.ping.latency).toFixed(0))
+        data.push(((tempData.download.bandwidth/125)/1000).toFixed(1))
+        data.push(((tempData.upload.bandwidth/125)/1000).toFixed(1))
+        // console.log(JSON.parse(element))
+    });
+
+    if (!speedTestData[0]){
+        await owlModel.speedTest.create({speedTest: [data]})
+    }
+    else{
+        for (let item of speedTestData) {
+            item.speedTest.push(data);
+            let speedData = item.speedTest
+            // console.log(speedData)
+            await owlModel.speedTest.findOneAndUpdate({_id: item._id}, {$set: {speedTest: speedData}}).exec();
+        }
+    }
+    // console.log(data)
+    return speedtest;
+      
+}
+speedTest();
 
 module.exports = app;
 function resolve(servicesPromiseArr: Promise<any>[]) {

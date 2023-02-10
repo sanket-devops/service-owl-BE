@@ -18,6 +18,14 @@ export interface Idashboard extends ICore {
   note: string
 }
 
+export interface Ispeedtest extends ICore {
+  speedTest: Itestmetrics[]
+}
+
+export interface Itestmetrics {
+  speedTest: [];
+}
+
 export interface IPort {
   name: string;
   port: number;
