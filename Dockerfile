@@ -2,6 +2,7 @@
 FROM node:16.15.1-alpine
 
 COPY speedtest /usr/bin
+RUN speedtest --accept-license
 
 WORKDIR /app
 
