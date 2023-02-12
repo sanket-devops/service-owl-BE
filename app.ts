@@ -285,6 +285,16 @@ app.get('/hosts/hostMetrics/:postId', async (req: any, res) => {
     }
 });
 
+app.get('/hosts/speedTest', async (req: any, res) => {
+    try {
+        let speedData = await owlModel.speedTest.find({});
+        let speedMetrics = speedData[0].speedTest;
+        res.send({data: getEncryptedData(speedMetrics)});
+    } catch (e) {
+        res.status(500);
+    }
+});
+
 // app.get('/hosts/latestPull', async (req, res) => {
 //     try {
 //         let latestPull = allServiceHost();
@@ -544,8 +554,6 @@ function toIsoString(date: any) {
         // dif + pad(Math.floor(Math.abs(tzo) / 60)) +
         // ':' + pad(Math.abs(tzo) % 60);
   }
-// let dt = new Date();
-// console.log(toIsoString(dt));
 
 async function sshHostMetrics(host: string, port: number, username: string, password: string) {
 
@@ -676,6 +684,8 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
 }
 
 async function speedTest() {
+    let dt = new Date();
+    let createdAt = toIsoString(dt); // ISO 8601 Date will saved to DB
     let speedTestData: Ispeedtest[] = <any>await owlModel.speedTest.find({}).select('speedTest').lean().exec();
     speedTestData = JSON.parse(JSON.stringify(speedTestData));
     let speedtest: any = [];
@@ -686,27 +696,30 @@ async function speedTest() {
     exec('speedtest --format=json', (error, stdout, stderr) => {
         if (error) {
           console.error(`exec error: ${error}`);
+          data.push(createdAt,0,0,0)
           return;
         }
         speedtest.push(stdout);
-        resolve()
-        // console.log(stdout);
+        speedtest.forEach(element => {
+            try {
+                let tempData = JSON.parse(element);
+                data.push(createdAt)
+                data.push(parseFloat((tempData.ping.latency).toFixed(0)))
+                data.push(parseFloat(((tempData.download.bandwidth/125)/1000).toFixed(2)))
+                data.push(parseFloat(((tempData.upload.bandwidth/125)/1000).toFixed(2)))
+                resolve()
+            } catch (error) {
+                data.push(createdAt,0,0,0)
+                resolve()
+            }
+        });
         if (stderr!= "")
         console.error(`stderr: ${stderr}`);
+        resolve()
       });
     })
     )
-
     await Promise.all(resDataPromiseArr);
-    speedtest.forEach(element => {
-        let tempData = JSON.parse(element);
-        data.push(tempData.timestamp)
-        data.push((tempData.ping.latency).toFixed(0))
-        data.push(((tempData.download.bandwidth/125)/1000).toFixed(1))
-        data.push(((tempData.upload.bandwidth/125)/1000).toFixed(1))
-        // console.log(JSON.parse(element))
-    });
-
     if (!speedTestData[0]){
         await owlModel.speedTest.create({speedTest: [data]})
     }
@@ -714,14 +727,11 @@ async function speedTest() {
         for (let item of speedTestData) {
             item.speedTest.push(data);
             let speedData = item.speedTest
-            // console.log(speedData)
             await owlModel.speedTest.findOneAndUpdate({_id: item._id}, {$set: {speedTest: speedData}}).exec();
         }
     }
-    // console.log(data)
-    return speedtest;
-      
 }
+setInterval(speedTest, 60000 * 5);
 speedTest();
 
 module.exports = app;
