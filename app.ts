@@ -693,31 +693,58 @@ async function speedTest() {
     let resDataPromiseArr: any = [];
     resDataPromiseArr.push(
         new Promise(async (resolve: any, reject: any) => {
-    exec('speedtest --format=json', (error, stdout, stderr) => {
-        if (error) {
-          console.error(`exec error: ${error}`);
-          data.push(createdAt,0,0,0)
-          return;
-        }
-        speedtest.push(stdout);
-        speedtest.forEach(element => {
-            try {
-                let tempData = JSON.parse(element);
-                data.push(createdAt)
-                data.push(parseFloat((tempData.ping.latency).toFixed(0)))
-                data.push(parseFloat(((tempData.download.bandwidth/125)/1000).toFixed(2)))
-                data.push(parseFloat(((tempData.upload.bandwidth/125)/1000).toFixed(2)))
+            exec('fast --upload --json', (error, stdout, stderr) => {
+                if (error) {
+                  console.error(`exec error: ${error}`);
+                  data.push(createdAt,0,0,0)
+                  return;
+                }
+                speedtest.push(stdout);
+                // console.log(stdout)
+                speedtest.forEach(element => {
+                    // console.log(element)
+                    try {
+                        let tempData = JSON.parse(element);
+                        data.push(createdAt)
+                        data.push(parseFloat(tempData.latency))
+                        data.push(parseFloat(tempData.downloadSpeed))
+                        data.push(parseFloat(tempData.uploadSpeed))
+                        resolve()
+                    } catch (error) {
+                        data.push(createdAt,0,0,0)
+                        resolve()
+                    }
+                });
+                if (stderr!= "")
+                console.error(`stderr: ${stderr}`);
                 resolve()
-            } catch (error) {
-                data.push(createdAt,0,0,0)
-                resolve()
-            }
-        });
-        if (stderr!= "")
-        console.error(`stderr: ${stderr}`);
-        resolve()
-      });
-    })
+              });
+            })
+    // exec('speedtest --format=json', (error, stdout, stderr) => {
+    //     if (error) {
+    //       console.error(`exec error: ${error}`);
+    //       data.push(createdAt,0,0,0)
+    //       return;
+    //     }
+    //     speedtest.push(stdout);
+    //     speedtest.forEach(element => {
+    //         try {
+    //             let tempData = JSON.parse(element);
+    //             data.push(createdAt)
+    //             data.push(parseFloat((tempData.ping.latency).toFixed(0)))
+    //             data.push(parseFloat(((tempData.download.bandwidth/125)/1000).toFixed(2)))
+    //             data.push(parseFloat(((tempData.upload.bandwidth/125)/1000).toFixed(2)))
+    //             resolve()
+    //         } catch (error) {
+    //             data.push(createdAt,0,0,0)
+    //             resolve()
+    //         }
+    //     });
+    //     if (stderr!= "")
+    //     console.error(`stderr: ${stderr}`);
+    //     resolve()
+    //   });
+    // })
     )
     await Promise.all(resDataPromiseArr);
     if (!speedTestData[0]){
@@ -727,6 +754,7 @@ async function speedTest() {
         for (let item of speedTestData) {
             item.speedTest.push(data);
             let speedData = item.speedTest
+            console.log(speedData)
             await owlModel.speedTest.findOneAndUpdate({_id: item._id}, {$set: {speedTest: speedData}}).exec();
         }
     }

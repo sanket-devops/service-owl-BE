@@ -1,8 +1,10 @@
 ### STAGE 1: Build ###
 FROM node:16.15.1-alpine
 
-COPY speedtest /usr/bin
-RUN speedtest --accept-license
+
+RUN npm install --global fast-cli
+# COPY speedtest /usr/bin
+# RUN speedtest --accept-license
 
 WORKDIR /app
 
