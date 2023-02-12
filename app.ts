@@ -737,7 +737,7 @@ async function speedTest() {
             }
             item.speedTest.push(data);
             let speedData = item.speedTest
-            console.log(speedData)
+            // console.log(speedData)
             await owlModel.speedTest.findOneAndUpdate({_id: item._id}, {$set: {speedTest: speedData}}).exec();
         }
     }
