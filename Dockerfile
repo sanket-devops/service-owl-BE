@@ -1,10 +1,10 @@
 ### STAGE 1: Build ###
-FROM node:16.15.1-alpine
+FROM node:16.15.1-buster
 
 
-RUN npm install --location=global fast-cli
-# COPY speedtest /usr/bin
-# RUN speedtest --accept-license
+RUN apt update && apt install wget -y && npm install --location=global fast-cli
+RUN wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+RUN apt install ./google-chrome-stable_current_amd64.deb -y
 
 WORKDIR /app
 

@@ -731,7 +731,7 @@ async function speedTest() {
             // Keep Array size fix and remove fist item
             for (let arrayItem = 0; arrayItem < item.speedTest.length; arrayItem++) {
                 if (item.speedTest.length >= (keepMetrics)) {
-                    console.log(item.speedTest.splice(1, 1));
+                    // console.log(item.speedTest.splice(0, 1));
                     item.speedTest.splice(0, 1);
                 }
             }
