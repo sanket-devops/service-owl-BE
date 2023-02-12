@@ -2,7 +2,7 @@
 FROM node:16.15.1-alpine
 
 
-RUN npm install --global fast-cli
+RUN npm install --location=global fast-cli
 # COPY speedtest /usr/bin
 # RUN speedtest --accept-license
 

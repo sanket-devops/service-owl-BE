@@ -684,6 +684,7 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
 }
 
 async function speedTest() {
+    let keepMetrics = 2016 //7 days (1 week) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
     let dt = new Date();
     let createdAt = toIsoString(dt); // ISO 8601 Date will saved to DB
     let speedTestData: Ispeedtest[] = <any>await owlModel.speedTest.find({}).select('speedTest').lean().exec();
@@ -720,31 +721,6 @@ async function speedTest() {
                 resolve()
               });
             })
-    // exec('speedtest --format=json', (error, stdout, stderr) => {
-    //     if (error) {
-    //       console.error(`exec error: ${error}`);
-    //       data.push(createdAt,0,0,0)
-    //       return;
-    //     }
-    //     speedtest.push(stdout);
-    //     speedtest.forEach(element => {
-    //         try {
-    //             let tempData = JSON.parse(element);
-    //             data.push(createdAt)
-    //             data.push(parseFloat((tempData.ping.latency).toFixed(0)))
-    //             data.push(parseFloat(((tempData.download.bandwidth/125)/1000).toFixed(2)))
-    //             data.push(parseFloat(((tempData.upload.bandwidth/125)/1000).toFixed(2)))
-    //             resolve()
-    //         } catch (error) {
-    //             data.push(createdAt,0,0,0)
-    //             resolve()
-    //         }
-    //     });
-    //     if (stderr!= "")
-    //     console.error(`stderr: ${stderr}`);
-    //     resolve()
-    //   });
-    // })
     )
     await Promise.all(resDataPromiseArr);
     if (!speedTestData[0]){
@@ -752,6 +728,13 @@ async function speedTest() {
     }
     else{
         for (let item of speedTestData) {
+            // Keep Array size fix and remove fist item
+            for (let arrayItem = 0; arrayItem < item.speedTest.length; arrayItem++) {
+                if (item.speedTest.length >= (keepMetrics)) {
+                    console.log(item.speedTest.splice(1, 1));
+                    item.speedTest.splice(0, 1);
+                }
+            }
             item.speedTest.push(data);
             let speedData = item.speedTest
             console.log(speedData)
