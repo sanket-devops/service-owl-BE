@@ -301,8 +301,8 @@ app.get('/hosts/speedTest/:Id/:Data', async (req: any, res) => {
         let internetCheckData = req.params.Data
         let id = req.params.Id
         let post = await owlModel.speedTest.findByIdAndUpdate(id, {internetCheck: internetCheckData}, {new: true, runValidator: true});
-        res.send(getEncryptedData(post));
-        // res.send(post);
+        // res.send(getEncryptedData(post));
+        res.send({"Internet_Check": internetCheckData});
         let doUpdate = async() => {
             if (isOwlChekcing) {
                 setTimeout(doUpdate, 1000);
