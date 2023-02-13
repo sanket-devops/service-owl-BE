@@ -47,7 +47,6 @@ mongoose.connect(db, {
     useUnifiedTopology: true,
 }).then(() => console.log(`MongoDB Connected: ${db}`)).catch(console.error);
 
-
 app.listen({port: port, host: hostname}, function () {
     console.log(`service-owl app listen at : http://${hostname}:${port}`)
 });
