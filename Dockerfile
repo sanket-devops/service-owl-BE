@@ -8,7 +8,7 @@ RUN apt install ./google-chrome-stable_current_amd64.deb -y
 
 WORKDIR /app
 
-COPY package*.json .
+COPY package*.json /app/
 
 # Install app dependencies
 RUN cd /app && npm set progress=false && npm cache clear --force && npm install
