@@ -25,7 +25,8 @@ const OwlSchema = new Schema({
 });
 
 const InternetSchema = new Schema({
-    speedTest: []
+    speedTest: [],
+    internetCheck: Boolean
 }, {
     // http://mongoosejs.com/docs/guide.html#timestamps
     timestamps: true

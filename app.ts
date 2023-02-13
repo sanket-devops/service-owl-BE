@@ -239,7 +239,7 @@ const allServiceHost = async () => {
 }
 // setTimeout(allServiceHost(), 10000);
 setInterval(allServiceHost, 60000 * 5);
-// allServiceHost();
+allServiceHost();
 
 
 app.get('/', (req, res) => {
@@ -288,8 +288,29 @@ app.get('/hosts/hostMetrics/:postId', async (req: any, res) => {
 app.get('/hosts/speedTest', async (req: any, res) => {
     try {
         let speedData = await owlModel.speedTest.find({});
-        let speedMetrics = speedData[0].speedTest;
+        let speedMetrics = speedData[0];
         res.send({data: getEncryptedData(speedMetrics)});
+    } catch (e) {
+        res.status(500);
+    }
+});
+
+//update internetCheck 
+app.get('/hosts/speedTest/:Id/:Data', async (req: any, res) => {
+    try {
+        let internetCheckData = req.params.Data
+        let id = req.params.Id
+        let post = await owlModel.speedTest.findByIdAndUpdate(id, {internetCheck: internetCheckData}, {new: true, runValidator: true});
+        res.send(getEncryptedData(post));
+        // res.send(post);
+        let doUpdate = async() => {
+            if (isOwlChekcing) {
+                setTimeout(doUpdate, 1000);
+            } else {
+                await owlModel.serviceHost.findByIdAndUpdate(id, {internetCheck: internetCheckData}, {new: true, runValidator: true});
+            }
+           }
+        doUpdate();
     } catch (e) {
         res.status(500);
     }
@@ -687,60 +708,68 @@ async function speedTest() {
     let keepMetrics = 2016 //7 days (1 week) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
     let dt = new Date();
     let createdAt = toIsoString(dt); // ISO 8601 Date will saved to DB
-    let speedTestData: Ispeedtest[] = <any>await owlModel.speedTest.find({}).select('speedTest').lean().exec();
-    speedTestData = JSON.parse(JSON.stringify(speedTestData));
+    let speedTestData: Ispeedtest[] = <any>await owlModel.speedTest.find({});
     let speedtest: any = [];
     let data:any = [];
     let resDataPromiseArr: any = [];
     resDataPromiseArr.push(
         new Promise(async (resolve: any, reject: any) => {
-            exec('fast --upload --json', (error, stdout, stderr) => {
-                if (error) {
-                  console.error(`exec error: ${error}`);
-                  data.push(createdAt,0,0,0)
-                  return;
-                }
-                speedtest.push(stdout);
-                // console.log(stdout)
-                speedtest.forEach(element => {
-                    // console.log(element)
-                    try {
-                        let tempData = JSON.parse(element);
-                        data.push(createdAt)
-                        data.push(parseFloat(tempData.latency))
-                        data.push(parseFloat(tempData.downloadSpeed))
-                        data.push(parseFloat(tempData.uploadSpeed))
-                        resolve()
-                    } catch (error) {
-                        data.push(createdAt,0,0,0)
-                        resolve()
+            if (!speedTestData[0]){
+                console.log("Create new Data")
+                await owlModel.speedTest.create({speedTest: [], internetCheck: true})
+            }
+            else{
+                speedTestData = JSON.parse(JSON.stringify(speedTestData));
+                if (speedTestData[0].internetCheck) {
+                    // console.log(speedTestData[0])
+                    // Keep Array size fix and remove fist item
+                    for (let arrayItem = 0; arrayItem < speedTestData[0].speedTest.length; arrayItem++) {
+                        if (speedTestData[0].speedTest.length >= (keepMetrics)) {
+                            // console.log(item.speedTest.splice(0, 1));
+                            speedTestData[0].speedTest.splice(0, 1);
+                        }
                     }
-                });
-                if (stderr!= "")
-                console.error(`stderr: ${stderr}`);
-                resolve()
-              });
-            })
-    )
-    await Promise.all(resDataPromiseArr);
-    if (!speedTestData[0]){
-        await owlModel.speedTest.create({speedTest: [data]})
-    }
-    else{
-        for (let item of speedTestData) {
-            // Keep Array size fix and remove fist item
-            for (let arrayItem = 0; arrayItem < item.speedTest.length; arrayItem++) {
-                if (item.speedTest.length >= (keepMetrics)) {
-                    // console.log(item.speedTest.splice(0, 1));
-                    item.speedTest.splice(0, 1);
+                    exec('fast --upload --json', (error, stdout, stderr) => {
+                        if (error) {
+                          console.error(`exec error: ${error}`);
+                          data.push(createdAt,0,0,0)
+                          return;
+                        }
+                        speedtest.push(stdout);
+                        // console.log(stdout)
+                        speedtest.forEach(element => {
+                            // console.log(element)
+                            try {
+                                let tempData = JSON.parse(element);
+                                data.push(createdAt)
+                                data.push(parseFloat(tempData.latency))
+                                data.push(parseFloat(tempData.downloadSpeed))
+                                data.push(parseFloat(tempData.uploadSpeed))
+                                speedTestData[0].speedTest.push(data);
+                                let speedData = speedTestData[0].speedTest
+                                // console.log(speedData)
+                                owlModel.speedTest.findOneAndUpdate({_id: speedTestData[0]._id}, {$set: {speedTest: speedData}}).exec();
+                                resolve()
+                            } catch (error) {
+                                data.push(createdAt,0,0,0)
+                                speedTestData[0].speedTest.push(data);
+                                let speedData = speedTestData[0].speedTest
+                                // console.log(speedData)
+                                owlModel.speedTest.findOneAndUpdate({_id: speedTestData[0]._id}, {$set: {speedTest: speedData}}).exec();
+                                resolve()
+                            }
+                        });
+                        if (stderr!= "") {
+                            data.push(createdAt,0,0,0)
+                            console.error(`stderr: ${stderr}`);
+                            resolve()
+                        }
+                    });
                 }
             }
-            item.speedTest.push(data);
-            let speedData = item.speedTest
-            // console.log(speedData)
-            await owlModel.speedTest.findOneAndUpdate({_id: item._id}, {$set: {speedTest: speedData}}).exec();
-        }
-    }
+        })
+    )
+    await Promise.all(resDataPromiseArr);
 }
 setInterval(speedTest, 60000 * 5);
 speedTest();
