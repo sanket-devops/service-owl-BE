@@ -605,8 +605,9 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
         "CPU": Number,
         "uptime": String
     };
-    let dt = new Date();
-    let createdAt = toIsoString(dt); // ISO 8601 Date will saved to DB
+    let dt = new Date(new Date().toUTCString());
+    let usaTime = dt.toLocaleString("en-US", {timeZone: "America/New_York"});
+    let createdAt = usaTime;
     let resData: any = {};
     let sshConnected: boolean = false;
     for (let k of metricsArr) {
@@ -636,9 +637,6 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                                     let CpuFree = (CpuTotal - +CpuUsage).toFixed(1);
                                     let CPU = resData.CPU;
                                     let uptime = resData.uptime;
-                                    // let createdAt = new Date(); // ISO 8601 Date will saved to DB
-                                    // let dt = new Date();
-                                    // let createdAt = toIsoString(dt); // ISO 8601 Date will saved to DB
 
                                     hostMetrics = {
                                         "diskStatus": [createdAt, +DiskTotal, +DiskUsage, +DiskFree],
@@ -705,8 +703,10 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
 
 async function speedTest() {
     let keepMetrics = 2016 //7 days (1 week) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
-    let dt = new Date();
-    let createdAt = toIsoString(dt); // ISO 8601 Date will saved to DB
+    let dt = new Date(new Date().toUTCString());
+    let usaTime = dt.toLocaleString("en-US", {timeZone: "America/New_York"});
+    let createdAt = usaTime;
+    // console.log(createdAt)
     let speedTestData: Ispeedtest[] = <any>await owlModel.speedTest.find({});
     let speedtest: any = [];
     let data:any = [];
