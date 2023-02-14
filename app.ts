@@ -606,7 +606,7 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
         "uptime": String
     };
     let dt = new Date(new Date().toUTCString());
-    let usaTime = dt.toLocaleString("en-US", {timeZone: "America/New_York"});
+    let usaTime = dt.toLocaleString("en-US", {timeZone: "America/New_York",timeStyle: "short",dateStyle: "short"});
     let createdAt = usaTime;
     let resData: any = {};
     let sshConnected: boolean = false;
@@ -704,7 +704,7 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
 async function speedTest() {
     let keepMetrics = 2016 //7 days (1 week) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
     let dt = new Date(new Date().toUTCString());
-    let usaTime = dt.toLocaleString("en-US", {timeZone: "America/New_York"});
+    let usaTime = dt.toLocaleString("en-US", {timeZone: "America/New_York",timeStyle: "short",dateStyle: "short"});
     let createdAt = usaTime;
     // console.log(createdAt)
     let speedTestData: Ispeedtest[] = <any>await owlModel.speedTest.find({});
