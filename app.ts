@@ -328,7 +328,7 @@ app.get('/hosts/speedTest/:Id/:Data', async (req: any, res) => {
 app.post('/hosts/host-save', async (req: any, res) => {
     try {
         let tempData = JSON.parse(getDecryptedData(req.body.data));
-        let saved = await owlModel.create(tempData);
+        let saved = await owlModel.serviceHost.create(tempData);
         res.send(saved);
     } catch (e) {
         console.log(e);
