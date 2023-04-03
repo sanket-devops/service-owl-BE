@@ -294,6 +294,17 @@ app.get('/hosts/speedTest', async (req: any, res) => {
     }
 });
 
+app.get('/hosts/speedTest/:PullData', async (req: any, res) => {
+    try {
+        let speedData = await owlModel.speedTest.find({});
+        // let speedMetrics = speedData[0];
+        let speedMetrics = speedData[0].speedTest.slice(Math.max(speedData[0].speedTest.length - req.params.PullData, 0));
+        res.send({data: getEncryptedData(speedMetrics)});
+    } catch (e) {
+        res.status(500);
+    }
+});
+
 //update internetCheck 
 app.get('/hosts/speedTest/:Id/:Data', async (req: any, res) => {
     try {
