@@ -11,7 +11,7 @@ const OwlSchema = new Schema({
     userName: String,
     userPass: String,
     port: [{name: String, port: Number, status: String, http: Boolean, path: String, method: String, statuscode: Number}],
-    hostMetrics: [{diskStatus: [], memStatus: [], cpuStatus: [], DiskTotal: Number, DiskUsage: Number, DiskFree: Number, MemTotal: Number, MemUsage: Number, MemFree: Number, CpuTotal: Number, CpuUsage: Number, CpuFree: Number, CPU: Number, uptime: String}],
+    hostMetrics: [{diskStatus: [], memStatus: [], cpuStatus: [], DiskTotal: String, DiskUsage: String, DiskFree: String, MemTotal: String, MemUsage: String, MemFree: String, CpuTotal: String, CpuUsage: String, CpuFree: String, CPU: String, uptime: String}],
     linkTo: [{hostName: String, ipAddress: String, port: Number}],
     groupName: String,
     clusterName: String,

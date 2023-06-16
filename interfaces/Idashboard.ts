@@ -1,26 +1,26 @@
-import {ICore} from './Icore';
+import { ICore } from "./Icore";
 
 export interface Idashboard extends ICore {
-  hostCheck: boolean,
-  metricsCheck: boolean,
-  hostName: string,
-  ipAddress: string,
-  userName: string,
-  userPass: string,
-  port: IPort[],
-  hostMetrics: IhostMetrics[],
-  linkTo: ILinked[],
-  groupName: string,
-  clusterName: string,
-  envName: string,
-  vmName: string,
-  status?: string,
-  note: string
+  hostCheck: boolean;
+  metricsCheck: boolean;
+  hostName: string;
+  ipAddress: string;
+  userName: string;
+  userPass: string;
+  port: IPort[];
+  hostMetrics: IhostMetrics[];
+  linkTo: ILinked[];
+  groupName: string;
+  clusterName: string;
+  envName: string;
+  vmName: string;
+  status?: string;
+  note: string;
 }
 
 export interface Ispeedtest extends ICore {
-  speedTest: Itestmetrics[],
-  internetCheck: boolean
+  speedTest: Itestmetrics[];
+  internetCheck: boolean;
 }
 
 export interface Itestmetrics {
@@ -32,11 +32,10 @@ export interface IPort {
   port: number;
   status: string;
   http: boolean;
-  path: string; 
+  path: string;
   method: string;
   statuscode: number;
 }
-
 
 export interface ILinked {
   hostName: string;
@@ -44,20 +43,19 @@ export interface ILinked {
   port: number;
 }
 
-
 export interface IhostMetrics {
-  diskStatus: [diskStatus: []];
-  memStatus: [memStatus: []];
-  cpuStatus: [cpuStatus: []];
-  DiskTotal: number;
-  DiskUsage: number;
-  DiskFree: number;
-  MemTotal: number;
-  MemUsage: number;
-  MemFree: number;
-  CpuTotal: number;
-  CpuUsage: number;
-  CpuFree: number;
-  CPU: number;
+  diskStatus: any[];
+  memStatus: any[];
+  cpuStatus: any[];
+  DiskTotal: string;
+  DiskUsage: string;
+  DiskFree: string;
+  MemTotal: string;
+  MemUsage: string;
+  MemFree: string;
+  CpuTotal: string;
+  CpuUsage: string;
+  CpuFree: string;
+  CPU: string;
   uptime: string;
 }
