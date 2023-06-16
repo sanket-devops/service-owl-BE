@@ -1,4 +1,4 @@
-import {Idashboard, IPort} from './interfaces/Idashboard';
+import {IhostMetrics, Idashboard, IPort, Ispeedtest} from './interfaces/Idashboard';
 import {EStatus} from './interfaces/enums/EStatus';
 import { table, getBorderCharacters } from 'table';
 import Fastify from 'fastify'
@@ -6,6 +6,9 @@ import cors from '@fastify/cors'
 import moment from 'moment';
 import * as http from 'http';
 import * as https from 'https';
+import { Client } from 'ssh2';
+
+import { exec } from 'child_process';
 
 process.on('unhandledRejection', (error: Error, promise) => {
     console.log(error);
@@ -32,8 +35,7 @@ const hostname = '0.0.0.0';
 const port = 8002;
 let owlModel = require('./owl.model');
 let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.120.135:27017/service-owl?authSource=admin';
-// let db = 'mongodb://admin:admin@192.168.10.166:32717/service-owl?authSource=admin';
-// let db = 'mongodb://localhost:27017/service-owl?authSource=admin';
+// let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.10.108:27017/service-owl?authSource=admin';
 let allData = [];
 let nodemailer = require('nodemailer');
 
@@ -44,7 +46,6 @@ mongoose.connect(db, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
 }).then(() => console.log(`MongoDB Connected: ${db}`)).catch(console.error);
-
 
 app.listen({port: port, host: hostname}, function () {
     console.log(`service-owl app listen at : http://${hostname}:${port}`)
@@ -67,7 +68,7 @@ const allServiceHost = async () => {
     console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Start =>`, counter,`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
     isOwlChekcing = true;
     let startDate = new Date().getTime();
-    let allData: Idashboard[] = <any>await owlModel.find({}).select('ipAddress hostName port hostCheck').lean().exec();
+    let allData: Idashboard[] = <any>await owlModel.serviceHost.find({}).select('ipAddress userName userPass hostName port hostMetrics hostCheck metricsCheck').lean().exec();
     allData = JSON.parse(JSON.stringify(allData));
     let servicesPromiseArr: Promise<any>[] = [];
     // loop services
@@ -78,6 +79,84 @@ const allServiceHost = async () => {
 
                 let downCount = 0;
                 let portsPromiseArr: Promise<any>[] = [];
+                let hostMetricsPromiseArr: Promise<any>[] = [];
+                if (item.metricsCheck) {
+                    if (item._id && item.userName && item.userPass) {
+                        hostMetricsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
+    
+                            let host = item.ipAddress;
+                            let port = 22;
+                            let username = item.userName;
+                            let password = item.userPass;
+    
+                            // let keepMetrics = 288 //24H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                            // let keepMetrics = 576 //48H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                            let keepMetrics = 2016 //7 days (1 week) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                            // let keepMetrics = 8640 //30 days (1 Month) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                            // let keepMetrics = 25920 //90 days (3 Months) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+    
+                            let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
+                            // console.log(resHostMetrics);
+
+                            let hostMetrics: IhostMetrics[] = [{
+                                "diskStatus": [],
+                                "memStatus": [],
+                                "cpuStatus": [],
+                                "DiskTotal": "0",
+                                "DiskUsage": "0",
+                                "DiskFree": "0",
+                                "MemTotal": "0",
+                                "MemUsage": "0",
+                                "MemFree": "0",
+                                "CpuTotal": "0",
+                                "CpuUsage": "0",
+                                "CpuFree": "0",
+                                "CPU": "0",
+                                "uptime": "Start to get up time."
+                            }];
+                            if (item.hostMetrics && item.hostMetrics.length === 0) {
+                                item.hostMetrics.push(hostMetrics[0]);
+                            } else {
+                                item.hostMetrics = item.hostMetrics || hostMetrics
+                            }
+                            // Keep Array size fix and remove fist item
+                            for (let arrayItem = 0; arrayItem < item.hostMetrics[0].diskStatus.length; arrayItem++) {
+                                if (item.hostMetrics[0].diskStatus.length >= (keepMetrics)) {
+                                    item.hostMetrics[0].diskStatus.splice(0, 1);
+                                }
+                            }
+                            for (let arrayItem = 0; arrayItem < item.hostMetrics[0].memStatus.length; arrayItem++) {
+                                if (item.hostMetrics[0].memStatus.length >= (keepMetrics)) {
+                                    item.hostMetrics[0].memStatus.splice(0, 1);
+                                }
+                            }
+                            for (let arrayItem = 0; arrayItem < item.hostMetrics[0].cpuStatus.length; arrayItem++) {
+                                if (item.hostMetrics[0].cpuStatus.length >= (keepMetrics)) {
+                                    item.hostMetrics[0].cpuStatus.splice(0, 1);
+                                }
+                            }
+    
+                            item.hostMetrics[0].diskStatus.push(resHostMetrics.diskStatus);
+                            item.hostMetrics[0].memStatus.push(resHostMetrics.memStatus);
+                            item.hostMetrics[0].cpuStatus.push(resHostMetrics.cpuStatus);
+                            item.hostMetrics[0].DiskTotal = resHostMetrics.DiskTotal;
+                            item.hostMetrics[0].DiskUsage = resHostMetrics.DiskUsage;
+                            item.hostMetrics[0].DiskFree = resHostMetrics.DiskFree;
+                            item.hostMetrics[0].MemTotal = resHostMetrics.MemTotal;
+                            item.hostMetrics[0].MemUsage = resHostMetrics.MemUsage;
+                            item.hostMetrics[0].MemFree = resHostMetrics.MemFree;
+                            item.hostMetrics[0].CpuTotal = resHostMetrics.CpuTotal;
+                            item.hostMetrics[0].CpuUsage = resHostMetrics.CpuUsage;
+                            item.hostMetrics[0].CpuFree = resHostMetrics.CpuFree;
+                            item.hostMetrics[0].CPU = resHostMetrics.CPU;
+                            item.hostMetrics[0].uptime = resHostMetrics.uptime;
+                            let metricsData = item.hostMetrics
+                            await owlModel.serviceHost.findOneAndUpdate({_id: item._id}, {$set: {hostMetrics: metricsData}}).exec();
+                            // console.log(metricsData);
+                            resolve();
+                        }));
+                    }
+                }
                 for (let i = 0; i < item.port.length; i++) {
                     portsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
                         let portObj = item.port[i];
@@ -89,14 +168,8 @@ const allServiceHost = async () => {
                             path: portObj.path,
                             method: portObj.method,
                             timeout: 10000
-                          };
-                        // let httpCheck = {
-                        //     hostname: '192.168.130.183',
-                        //     port: 8888,
-                        //     path: '/',
-                        //     method: 'GET',
-                        //     timeout: 10000
-                        //   };
+                        };
+
                         try {
                             if (portObj.http) {
                                 const __ret = await setHttpStatus(portObj, httpCheck, isHttpUp, item);
@@ -126,7 +199,7 @@ const allServiceHost = async () => {
                                     portObj.status = 'UP'
                                 } catch (error) {
                                     try {
-                                        console.log(`Port Watching '${item.ipAddress}' Port '${portObj.port}'.`);
+                                        console.log(`Port Watching: '${item.ipAddress}' Port '${portObj.port}'.`);
                                         await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 10000, 60000 * 4); // wait for 5 minute to
                                         portObj.status = 'UP'
                                         console.log(`Port Checker: UP Found '${item.ipAddress}' Port '${portObj.port}'.`);
@@ -148,11 +221,11 @@ const allServiceHost = async () => {
                     }));
                 }
                 await Promise.all(portsPromiseArr);
-                await owlModel.findOneAndUpdate({_id: item._id}, {$set: {port: item.port}}).exec();
+                await owlModel.serviceHost.findOneAndUpdate({_id: item._id}, {$set: {port: item.port}}).exec();
 
-                if (upCount === item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'UP'}}).exec();
-                else if (downCount === item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'DOWN'}}).exec();
-                else if (upCount !== item.port.length && downCount !== item.port.length) await owlModel.findOneAndUpdate({_id: item._id}, {$set: {status: 'S_DOWN'}}).exec();
+                if (upCount === item.port.length) await owlModel.serviceHost.findOneAndUpdate({_id: item._id}, {$set: {status: 'UP'}}).exec();
+                else if (downCount === item.port.length) await owlModel.serviceHost.findOneAndUpdate({_id: item._id}, {$set: {status: 'DOWN'}}).exec();
+                else if (upCount !== item.port.length && downCount !== item.port.length) await owlModel.serviceHost.findOneAndUpdate({_id: item._id}, {$set: {status: 'S_DOWN'}}).exec();
                 resolve();
             }));
         }else {
@@ -173,13 +246,85 @@ allServiceHost();
 
 
 app.get('/', (req, res) => {
-    res.send(`service-owl is up and running...`);
+    res.send(`Service-Owl is up and running...`);
 })
 
 app.get('/hosts', async (req, res) => {
     try {
-        let hosts = await owlModel.find({}).sort({_id:-1});
+        // let hosts = await owlModel.serviceHost.find({}).sort({_id:-1});
+        let hosts = await owlModel.serviceHost.find({}).select('ipAddress hostName port hostMetrics.DiskFree hostMetrics.MemFree hostMetrics.CpuUsage linkTo userName userPass groupName clusterName envName vmName note status hostCheck metricsCheck createdAt updatedAt').sort({_id:-1});
         res.send({data: getEncryptedData(hosts)});
+    } catch (e) {
+        res.status(500);
+    }
+});
+
+app.get('/hosts/hostMetrics/:postId', async (req: any, res) => {
+    try {
+        let hostData = await owlModel.serviceHost.findOne({_id: req.params.postId});
+        let hostMetrics = hostData.hostMetrics[0];
+        if(hostMetrics === undefined){
+            hostMetrics = {
+                "diskStatus": [['Timestamp', 'Disk Total', 'Disk Usage', 'Disk Free'], [0, 0, 0, 0]],
+                "memStatus": [['Timestamp', 'Mem Total', 'Mem Usage', 'Mem Available'], [0, 0, 0, 0]],
+                "cpuStatus": [['Timestamp', 'CPU Total', 'CPU Usage', 'CPU Free'], [0, 0, 0, 0]],
+                "DiskTotal": 0,
+                "DiskUsage": 0,
+                "DiskFree": 0,
+                "MemTotal": 0,
+                "MemUsage": 0,
+                "MemFree": 0,
+                "CpuTotal": 0,
+                "CpuUsage": 0,
+                "CpuFree": 0,
+                "CPU": 0,
+                "uptime": `ssh: connect to host port : Connection refused`
+                };
+        }
+        // console.log(hostMetrics)
+        res.send({data: getEncryptedData(hostMetrics)});
+    } catch (e) {
+        res.status(500);
+    }
+});
+
+app.get('/hosts/speedTest', async (req: any, res) => {
+    try {
+        let speedData = await owlModel.speedTest.find({});
+        let speedMetrics = speedData[0];
+        res.send({data: getEncryptedData(speedMetrics)});
+    } catch (e) {
+        res.status(500);
+    }
+});
+
+app.get('/hosts/speedTest/:PullData', async (req: any, res) => {
+    try {
+        let speedData = await owlModel.speedTest.find({});
+        // let speedMetrics = speedData[0];
+        let speedMetrics = speedData[0].speedTest.slice(Math.max(speedData[0].speedTest.length - req.params.PullData, 0));
+        res.send({data: getEncryptedData(speedMetrics)});
+    } catch (e) {
+        res.status(500);
+    }
+});
+
+//update internetCheck 
+app.get('/hosts/speedTest/:Id/:Data', async (req: any, res) => {
+    try {
+        let internetCheckData = req.params.Data
+        let id = req.params.Id
+        let post = await owlModel.speedTest.findByIdAndUpdate(id, {internetCheck: internetCheckData}, {new: true, runValidator: true});
+        // res.send(getEncryptedData(post));
+        res.send({"Internet_Check": internetCheckData});
+        let doUpdate = async() => {
+            if (isOwlChekcing) {
+                setTimeout(doUpdate, 1000);
+            } else {
+                await owlModel.serviceHost.findByIdAndUpdate(id, {internetCheck: internetCheckData}, {new: true, runValidator: true});
+            }
+           }
+        doUpdate();
     } catch (e) {
         res.status(500);
     }
@@ -198,7 +343,7 @@ app.get('/hosts', async (req, res) => {
 app.post('/hosts/host-save', async (req: any, res) => {
     try {
         let tempData = JSON.parse(getDecryptedData(req.body.data));
-        let saved = await owlModel.create(tempData);
+        let saved = await owlModel.serviceHost.create(tempData);
         res.send(saved);
     } catch (e) {
         console.log(e);
@@ -210,7 +355,7 @@ app.post('/hosts/host-save', async (req: any, res) => {
 //get byId
 app.get('/hosts/:postId', async (req: any, res) => {
     try {
-        let post = await owlModel.findOne({_id: req.params.postId});
+        let post = await owlModel.serviceHost.findOne({_id: req.params.postId});
         res.send(post);
     } catch (e) {
         res.status(500);
@@ -222,13 +367,13 @@ app.put('/hosts/update', async (req: any, res) => {
     try {
         let tempData = JSON.parse(getDecryptedData(req.body.data));
         let id = getDecryptedData(req.body.id);
-        let post = await owlModel.findByIdAndUpdate({_id: id}, tempData, {new: true, runValidator: true});
+        let post = await owlModel.serviceHost.findByIdAndUpdate({_id: id}, tempData, {new: true, runValidator: true});
         res.send(post);
         let doUpdate = async() => {
             if (isOwlChekcing) {
                 setTimeout(doUpdate, 1000);
             } else {
-                await owlModel.findByIdAndUpdate({_id: id}, tempData, {new: true, runValidator: true});
+                await owlModel.serviceHost.findByIdAndUpdate({_id: id}, tempData, {new: true, runValidator: true});
             }
            }
         doUpdate();
@@ -240,7 +385,7 @@ app.put('/hosts/update', async (req: any, res) => {
 //delete
 app.post('/hosts/host-delete', async (req: any, res) => {
     try {
-        let post = await owlModel.findByIdAndRemove({
+        let post = await owlModel.serviceHost.findByIdAndRemove({
             _id: getDecryptedData(req.body.data)
         });
         res.send(post);
@@ -253,13 +398,13 @@ app.post('/hosts/host-delete', async (req: any, res) => {
 let localStorageData: Idashboard[];
 
 async function compareStatus() {
-    let res: Idashboard[] = JSON.parse(JSON.stringify(await owlModel.find({}).lean().exec()));
+    let res: Idashboard[] = JSON.parse(JSON.stringify(await owlModel.serviceHost.find({}).lean().exec()));
     let oldDashboard = localStorageData
-    let downHostServices = [];
+    let downHostServices: any = [];
     if (oldDashboard && oldDashboard.length) {
         let oldStorageMap = getRowsMap(oldDashboard, '_id');
         let changeFound = false;
-        let downServices = [];
+        let downServices: any = [];
         for (let item of res) {
             let oldItem: Idashboard = oldStorageMap[item._id];
             if (!oldItem) continue;
@@ -278,7 +423,7 @@ async function compareStatus() {
             }
             downHostServices.push(["***************", "*****", "***************"]);
         });
-        const tableConfig = {
+        const tableConfig: any = {
             // border: getBorderCharacters('honeywell'),
             columns: [
               { alignment: 'center'},
@@ -427,6 +572,206 @@ async function setHttpStatus(portObj, httpCheck: { path: string; hostname: strin
     });
 
 }
+
+function toIsoString(date: any) {
+    var tzo = -date.getTimezoneOffset(),
+        dif = tzo >= 0 ? '+' : '-',
+        pad = function(num) {
+            return (num < 10 ? '0' : '') + num;
+        };
+  
+    return date.getFullYear() +
+        '-' + pad(date.getMonth() + 1) +
+        '-' + pad(date.getDate()) +
+        'T' + pad(date.getHours()) +
+        ':' + pad(date.getMinutes()) +
+        ':' + pad(date.getSeconds())
+        // dif + pad(Math.floor(Math.abs(tzo) / 60)) +
+        // ':' + pad(Math.abs(tzo) % 60);
+  }
+
+async function sshHostMetrics(host: string, port: number, username: string, password: string) {
+
+    let metricsArr: string[] = ["DiskTotal", "DiskFree", "MemTotal", "MemFree", "CpuUsage", "CPU", "uptime"];
+    let metricsCom: any = {
+        DiskTotal: "df / | grep / | awk '{ print $2}'",
+        DiskFree: "df / | grep / | awk '{ print $4}'",
+        MemTotal: "cat /proc/meminfo | grep MemTotal | awk '{ print $2}'",
+        MemFree: "cat /proc/meminfo | grep MemFree | awk '{ print $2}'",
+        CpuUsage: "top -bn2|grep '%Cpu'|tail -1|grep -P '(....|...) id,'|awk '{print 100-$8}'",
+        CPU: "lscpu | grep 'CPU(s):' | awk 'FNR == 1 {print $2}'",
+        uptime: "uptime -p | awk '{ print $2,$3,$4,$5 }'"
+    }
+    let count = metricsArr.length - 1;
+
+    let hostMetrics = <IhostMetrics>{};
+    let dt = new Date(new Date().toUTCString());
+    let usaTime = dt.toLocaleString("en-US", {timeZone: "America/New_York",timeStyle: "short",dateStyle: "short"});
+    let createdAt = usaTime;
+    let resData: any = {};
+    let sshConnected: boolean = false;
+    for (let k of metricsArr) {
+        sshConnected = true;
+        let resDataPromiseArr: any = [];
+        resDataPromiseArr.push(
+            new Promise(async (resolve: any, reject: any) => {
+                if (k in metricsCom) {
+                    let conn = new Client();
+                    conn.on('ready', async () => {
+                        conn.exec(`${metricsCom[k]}`, (err, stream) => {
+                            if (err) throw err;
+                            stream.on('close', () => {
+                                // console.log(resData);
+                                resolve();
+                                conn.end();
+                                if (count === metricsArr.indexOf(k)) {
+                                    // console.log(resData);
+                                    let DiskTotal = ((resData.DiskTotal / 1024) / 1024).toFixed(1);
+                                    let DiskFree = ((resData.DiskFree / 1024) / 1024).toFixed(1);
+                                    let DiskUsage = (+DiskTotal - +DiskFree).toFixed(1);
+                                    let MemTotal = ((resData.MemTotal / 1024) / 1024).toFixed(1);
+                                    let MemFree = ((resData.MemFree / 1024) / 1024).toFixed(1);
+                                    let MemUsage = (+MemTotal - +MemFree).toFixed(1);
+                                    let CpuTotal = 100;
+                                    let CpuUsage = resData.CpuUsage;
+                                    let CpuFree = (CpuTotal - +CpuUsage).toFixed(1);
+                                    let CPU = resData.CPU;
+                                    let uptime = resData.uptime;
+
+                                    hostMetrics = {
+                                        "diskStatus": [createdAt, +DiskTotal, +DiskUsage, +DiskFree],
+                                        "memStatus": [createdAt, +MemTotal, +MemUsage, +MemFree],
+                                        "cpuStatus": [createdAt, CpuTotal, +CpuUsage, +CpuFree],
+                                        "DiskTotal": (+DiskTotal).toFixed(0),
+                                        "DiskUsage": (+DiskUsage).toFixed(0),
+                                        "DiskFree": (+DiskFree).toFixed(0),
+                                        "MemTotal": (+MemTotal).toFixed(1),
+                                        "MemUsage": (+MemUsage).toFixed(1),
+                                        "MemFree": (+MemFree).toFixed(1),
+                                        "CpuTotal": (+CpuTotal).toFixed(0),
+                                        "CpuUsage": (+CpuUsage).toFixed(0),
+                                        "CpuFree": (+CpuFree).toFixed(0),
+                                        "CPU": CPU,
+                                        "uptime": uptime
+                                    };
+
+                                }
+                            }).on('data', async (data) => {
+                                let output = await JSON.parse(JSON.stringify('' + data));
+                                // resData[k] = await output.replace(/(\r\n|\n|\r)/gm, "");
+                                resData[k] = await output.replace(/\n/g, '');
+                            });
+                        });
+                    }).on('error', async(err: any) => {
+                        console.log(err);
+                        console.log(`Error: => ssh: connect to host ${host} port ${port}: Connection refused`)
+                        hostMetrics = {
+                            "diskStatus": [createdAt, 0, 0, 0],
+                            "memStatus": [createdAt, 0, 0, 0],
+                            "cpuStatus": [createdAt, 0, 0, 0],
+                            "DiskTotal": "0",
+                            "DiskUsage": "0",
+                            "DiskFree": "0",
+                            "MemTotal": "0",
+                            "MemUsage": "0",
+                            "MemFree": "0",
+                            "CpuTotal": "0",
+                            "CpuUsage": "0",
+                            "CpuFree": "0",
+                            "CPU": "0",
+                            "uptime": `ssh: connect to host ${host} port ${port}: Connection refused`
+                        };
+                        sshConnected = false;
+                        resolve();
+                    }).connect({
+                        host: host,
+                        port: port,
+                        username: username,
+                        password: password
+                    });
+                }
+            })
+        );
+        await Promise.all(resDataPromiseArr);
+        if (!sshConnected) {
+            break;
+        }
+    }
+    // console.log(await hostMetrics);
+    return hostMetrics;
+}
+
+async function speedTest() {
+    let keepMetrics = 2016 //7 days (1 week) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+    let dt = new Date(new Date().toUTCString());
+    let usaTime = dt.toLocaleString("en-US", {timeZone: "America/New_York",timeStyle: "short",dateStyle: "short"});
+    let createdAt = usaTime;
+    // console.log(createdAt)
+    let speedTestData: Ispeedtest[] = <any>await owlModel.speedTest.find({});
+    let speedtest: any = [];
+    let data:any = [];
+    let resDataPromiseArr: any = [];
+    resDataPromiseArr.push(
+        new Promise(async (resolve: any, reject: any) => {
+            if (!speedTestData[0]){
+                console.log("Create new Data")
+                await owlModel.speedTest.create({speedTest: [], internetCheck: true})
+            }
+            else{
+                speedTestData = JSON.parse(JSON.stringify(speedTestData));
+                if (speedTestData[0].internetCheck) {
+                    // console.log(speedTestData[0])
+                    // Keep Array size fix and remove fist item
+                    for (let arrayItem = 0; arrayItem < speedTestData[0].speedTest.length; arrayItem++) {
+                        if (speedTestData[0].speedTest.length >= (keepMetrics)) {
+                            // console.log(item.speedTest.splice(0, 1));
+                            speedTestData[0].speedTest.splice(0, 1);
+                        }
+                    }
+                    exec('fast --upload --json', (error, stdout, stderr) => {
+                        if (error) {
+                          console.error(`exec error: ${error}`);
+                          data.push(createdAt,0,0,0)
+                          return;
+                        }
+                        speedtest.push(stdout);
+                        // console.log(stdout)
+                        speedtest.forEach(element => {
+                            // console.log(element)
+                            try {
+                                let tempData = JSON.parse(element);
+                                data.push(createdAt)
+                                data.push(parseFloat(tempData.latency))
+                                data.push(parseFloat(tempData.downloadSpeed))
+                                data.push(parseFloat(tempData.uploadSpeed))
+                                speedTestData[0].speedTest.push(data);
+                                let speedData = speedTestData[0].speedTest
+                                // console.log(speedData)
+                                owlModel.speedTest.findOneAndUpdate({_id: speedTestData[0]._id}, {$set: {speedTest: speedData}}).exec();
+                                resolve()
+                            } catch (error) {
+                                data.push(createdAt,0,0,0)
+                                speedTestData[0].speedTest.push(data);
+                                let speedData = speedTestData[0].speedTest
+                                // console.log(speedData)
+                                owlModel.speedTest.findOneAndUpdate({_id: speedTestData[0]._id}, {$set: {speedTest: speedData}}).exec();
+                                resolve()
+                            }
+                        });
+                        if (stderr!= "") {
+                            data.push(createdAt,0,0,0)
+                            console.error(`stderr: ${stderr}`);
+                            resolve()
+                        }
+                    });
+                }
+            }
+        })
+    )
+    await Promise.all(resDataPromiseArr);
+}
+setInterval(speedTest, 60000 * 5);
+speedTest();
 
 module.exports = app;
 function resolve(servicesPromiseArr: Promise<any>[]) {
