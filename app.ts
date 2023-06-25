@@ -526,16 +526,21 @@ function getRowsMap(rows: any[], key: string) {
     return obj;
 }
 
-async function setHttpStatus(portObj, httpCheck: { path: string; hostname: string; method: string; port: any; timeout: number }, isHttpUp, item): Promise<any> {
+async function setHttpStatus(portObj: IPort, httpCheck: { path: string; hostname: string; method: string; port: any; timeout: number }, isHttpUp, item): Promise<any> {
     return new Promise(async (resolve, reject) => {
         try {
             let isResolveCalled = false;
             let req = http.request(httpCheck, (res) => {
                 // console.log(res.statusCode);
-                // portObj.statuscode = res.statusCode;
-                isHttpUp = true;
-                isResolveCalled = true;
-                resolve({isHttpUp});
+                if (portObj.statuscode === res.statusCode) {
+                    isHttpUp = true;
+                    isResolveCalled = true;
+                    resolve({isHttpUp});
+                }
+                else {
+                    isResolveCalled = true;
+                    resolve({isHttpUp: false});
+                }
             });
             req.on('timeout', function () {
                 // console.log("timeout! " + (httpCheck.timeout / 1000) + " seconds => Req expired: " + item.ipAddress + " Port: " + portObj.port);
