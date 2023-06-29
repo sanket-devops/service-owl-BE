@@ -7,6 +7,60 @@ import moment from 'moment';
 import * as http from 'http';
 import * as https from 'https';
 import { Client } from 'ssh2';
+import Ansible from 'node-ansible';
+import fs from 'fs';
+import path from "path";
+
+let playbookPath = "./playbooks/restart-system";
+let baseName = path.basename(playbookPath);
+let runningJobPath = `./running-playbooks/${baseName}`;
+
+fs.cp(playbookPath, runningJobPath, {recursive: true}, (error) => {
+    if (error) {
+        console.error(error);
+      }
+})
+console.log("Start");
+
+let fileName = ["inventory.txt", "playbook.yaml"];
+let replaceHostDetails = ["Host-Name", "Host-Address", "Host-User", "Host-Password", "Host-Sudo-Password"]
+
+const replaceStrings = (oldStr: string, newStr: string) => {
+fileName.forEach(element => {
+    let filePath = path.join(runningJobPath, element)
+    let oldData = fs.readFileSync(filePath, "utf-8");
+    let newData = '';
+
+    replaceHostDetails.forEach( file => {
+        newData = oldData.replace(oldStr, newStr);
+    });
+    let newFile = fs.writeFileSync(filePath, newData, "utf-8")
+    console.log(newFile);
+
+    });
+};
+
+    
+    setTimeout(() => {
+        replaceStrings('Host-Name', 'service-owl')
+        console.log("Mid");
+    // fs.rmSync(runningJobPath, { recursive: true, force: true });
+    console.log("End");
+}, 10000);
+
+
+
+    const command = new Ansible.AdHoc().module('shell').hosts('localhost').args("echo 'hello'");
+    var promise = command.exec();
+    promise.then(function(successResult) {
+    // console.log(successResult.code); // Exit code of the executed command
+    // console.log(successResult.output) // Standard output/error of the executed command
+    }, function(error: any) {
+    console.error(error);
+    })
+
+
+
 
 import { exec } from 'child_process';
 
@@ -34,8 +88,8 @@ const bodyParser = require('body-parser');
 const hostname = '0.0.0.0';
 const port = 8002;
 let owlModel = require('./owl.model');
-let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.120.135:27017/service-owl?authSource=admin';
-// let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.10.108:27017/service-owl?authSource=admin';
+// let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.120.135:27017/service-owl?authSource=admin';
+let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.10.108:27017/service-owl?authSource=admin';
 let allData = [];
 let nodemailer = require('nodemailer');
 
@@ -241,8 +295,8 @@ const allServiceHost = async () => {
     console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Stop =>`, counter++,`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
 }
 // setTimeout(allServiceHost(), 10000);
-setInterval(allServiceHost, 60000 * 5);
-allServiceHost();
+// setInterval(allServiceHost, 60000 * 5);
+// allServiceHost();
 
 
 app.get('/', (req, res) => {

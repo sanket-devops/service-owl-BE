@@ -1,0 +1,8 @@
+# Reboot System #
+## System Rebooting... ##
+- name: Reboot a Linux machine 
+  reboot:
+    test_command: uptime
+  become: yes
+
+
