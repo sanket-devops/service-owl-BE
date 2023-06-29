@@ -53,8 +53,8 @@ fileName.forEach(element => {
     const command = new Ansible.AdHoc().module('shell').hosts('localhost').args("echo 'hello'");
     var promise = command.exec();
     promise.then(function(successResult) {
-    // console.log(successResult.code); // Exit code of the executed command
-    // console.log(successResult.output) // Standard output/error of the executed command
+    console.log(successResult.code); // Exit code of the executed command
+    console.log(successResult.output) // Standard output/error of the executed command
     }, function(error: any) {
     console.error(error);
     })
