@@ -1,2 +1,0 @@
-[rebootSystem]
-service-owl ansible_host=Host-Address ansible_user=Host-User ansible_ssh_pass=Host-Password ansible_sudo_pass=Host-Sudo-Password
