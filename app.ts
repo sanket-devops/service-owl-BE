@@ -243,8 +243,8 @@ const allServiceHost = async () => {
     console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Stop =>`, counter++,`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
 }
 // setTimeout(allServiceHost(), 10000);
-// setInterval(allServiceHost, 60000 * 5);
-// allServiceHost();
+setInterval(allServiceHost, 60000 * 5);
+allServiceHost();
 
 
 app.get('/', (req, res) => {
