@@ -783,6 +783,9 @@ speedTest();
 async function runAnsiblePlaybook(reqData: any, playBookName: string) {
     let myPromise = new Promise((resolve, reject) => {
         try {
+            if (!fs.existsSync("./running-playbooks")) {
+                fs.mkdirSync("./running-playbooks");
+            }
             let playbookPath = `./playbooks/${playBookName}`;
             let baseName = path.basename(playbookPath);
             let runningJobPath = `./running-playbooks/${baseName}`;
@@ -822,7 +825,7 @@ async function runAnsiblePlaybook(reqData: any, playBookName: string) {
                     function (successResult: any) {
                         console.log(successResult);
                         resolve(successResult);
-                        // fs.rmSync(runningJobPath, { recursive: true, force: true });
+                        fs.rmSync(runningJobPath, { recursive: true, force: true });
                     },
                     function (error: any) {
                         reject(error);
