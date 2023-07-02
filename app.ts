@@ -36,8 +36,8 @@ const bodyParser = require('body-parser');
 const hostname = '0.0.0.0';
 const port = 8002;
 let owlModel = require('./owl.model');
-let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.120.135:27017/service-owl?authSource=admin';
-// let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.10.108:27017/service-owl?authSource=admin';
+// let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.120.135:27017/service-owl?authSource=admin';
+let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.10.108:27017/service-owl?authSource=admin';
 let allData = [];
 let nodemailer = require('nodemailer');
 
@@ -243,8 +243,8 @@ const allServiceHost = async () => {
     console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Stop =>`, counter++,`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
 }
 // setTimeout(allServiceHost(), 10000);
-setInterval(allServiceHost, 60000 * 5);
-allServiceHost();
+// setInterval(allServiceHost, 60000 * 5);
+// allServiceHost();
 
 
 app.get('/', (req, res) => {
@@ -781,71 +781,84 @@ setInterval(speedTest, 60000 * 5);
 speedTest();
 
 async function runAnsiblePlaybook(reqData: any, playBookName: string) {
-  let myPromise = new Promise((resolve, reject) => {
-    try {
-      let playbookPath = `./playbooks/${playBookName}`;
-      let baseName = path.basename(playbookPath);
-      let runningJobPath = `./running-playbooks/${baseName}`;
-      fs.cp(playbookPath, runningJobPath, { recursive: true }, (error) => {
-        if (error) {
-          console.error(error);
-        }
-      });
-      let fileName = ["inventory.txt", "playbook.yml"];
-      const replaceStrings = () => {
-        fileName.forEach((element) => {
-          let filePath = path.join(runningJobPath, element);
-          switch (element) {
-            case "inventory.txt":
-              let replaceHostDetails = `${reqData.hostName} ansible_host=${reqData.ipAddress} ansible_user=${reqData.userName} ansible_ssh_pass=${reqData.userPass} ansible_sudo_pass=${reqData.userPass}`;
-              fs.writeFileSync(filePath, replaceHostDetails, "utf-8");
-              break;
+    let myPromise = new Promise((resolve, reject) => {
+        try {
+            let playbookPath = `./playbooks/${playBookName}`;
+            let baseName = path.basename(playbookPath);
+            let runningJobPath = `./running-playbooks/${baseName}`;
+            fs.cp(playbookPath, runningJobPath, { recursive: true }, (error) => {
+                if (error) {
+                    console.error(error);
+                }
+            });
+            let fileName = ["inventory.txt", "playbook.yml"];
+            const replaceStrings = () => {
+                fileName.forEach((element) => {
+                    let filePath = path.join(runningJobPath, element);
+                    switch (element) {
+                        case "inventory.txt":
+                            let replaceHostDetails = `${reqData.hostName} ansible_host=${reqData.ipAddress} ansible_user=${reqData.userName} ansible_ssh_pass=${reqData.userPass} ansible_sudo_pass=${reqData.userPass}`;
+                            fs.writeFileSync(filePath, replaceHostDetails, "utf-8");
+                            break;
 
-            case "playbook.yml":
-              let oldData = fs.readFileSync(filePath, "utf-8");
-              let newData = oldData.replace("Host-Name", reqData.hostName);
-              fs.writeFileSync(filePath, newData, "utf-8");
-              break;
+                        case "playbook.yml":
+                            let oldData = fs.readFileSync(filePath, "utf-8");
+                            let newData = oldData.replace("Host-Name", reqData.hostName);
+                            fs.writeFileSync(filePath, newData, "utf-8");
+                            break;
 
-            default:
-              break;
-          }
-        });
-      };
-      setTimeout(() => {
-        replaceStrings();
-        let playbook = new Ansible.Playbook()
-          .playbook(`${runningJobPath}/playbook`)
-          .inventory(`${runningJobPath}/inventory.txt`);
-        let promise = playbook.exec();
-        promise.then(
-          function (successResult: any) {
-            resolve(successResult);
-            fs.rmSync(runningJobPath, { recursive: true, force: true });
-          },
-          function (error: any) {
+                        default:
+                            break;
+                    }
+                });
+            };
+            setTimeout(() => {
+                replaceStrings();
+                let playbook = new Ansible.Playbook()
+                    .playbook(`${runningJobPath}/playbook`)
+                    .inventory(`${runningJobPath}/inventory.txt`);
+                let promise = playbook.exec();
+                promise.then(
+                    function (successResult: any) {
+                        resolve(successResult);
+                        fs.rmSync(runningJobPath, { recursive: true, force: true });
+                    },
+                    function (error: any) {
+                        reject(error);
+                    }
+                );
+            }, 1000);
+        } catch (error) {
             reject(error);
-          }
-        );
-      }, 1000);
-    } catch (error) {
-      reject(error);
-    }
-  });
-  return await myPromise;
+        }
+    });
+    return await myPromise;
 }
 
 // Restart-Host post
 app.post("/hosts/restart-host", async (req: any, res) => {
-  try {
-    let tempData = JSON.parse(getDecryptedData(req.body.data));
-    let tempbookName = req.body.bookName;
-    res.send(await runAnsiblePlaybook(tempData, tempbookName));
-  } catch (e) {
-    console.log(e);
-    res.status(500);
-    res.send({ message: e.message });
-  }
+    try {
+        let tempData = JSON.parse(getDecryptedData(req.body.data));
+        let tempbookName = req.body.bookName;
+        res.send(await runAnsiblePlaybook(tempData, tempbookName));
+    } catch (e) {
+        console.log(e);
+        res.status(500);
+        res.send({ message: e.message });
+    }
+});
+
+// ShutDown-Host post
+app.post("/hosts/shutdown-host", async (req: any, res) => {
+    try {
+        let tempData = JSON.parse(getDecryptedData(req.body.data));
+        let tempbookName = req.body.bookName;
+        res.send(await runAnsiblePlaybook(tempData, tempbookName));
+    } catch (e) {
+        console.log(e);
+        res.status(500);
+        res.send({ message: e.message });
+    }
 });
 
 module.exports = app;

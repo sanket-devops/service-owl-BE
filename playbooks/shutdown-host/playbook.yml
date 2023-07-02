@@ -1,5 +1,5 @@
 ---
-- name: System Restarting...
+- name: Host Shutdown
   hosts: Host-Name
   become: yes
   become_method: sudo
