@@ -36,8 +36,8 @@ const bodyParser = require('body-parser');
 const hostname = '0.0.0.0';
 const port = 8002;
 let owlModel = require('./owl.model');
-// let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.120.135:27017/service-owl?authSource=admin';
-let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.10.108:27017/service-owl?authSource=admin';
+let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.120.135:27017/service-owl?authSource=admin';
+// let db = 'mongodb://service-owl:ecivreS8002lwO@192.168.10.108:27017/service-owl?authSource=admin';
 let allData = [];
 let nodemailer = require('nodemailer');
 
@@ -243,8 +243,8 @@ const allServiceHost = async () => {
     console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Stop =>`, counter++,`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
 }
 // setTimeout(allServiceHost(), 10000);
-// setInterval(allServiceHost, 60000 * 5);
-// allServiceHost();
+setInterval(allServiceHost, 60000 * 5);
+allServiceHost();
 
 
 app.get('/', (req, res) => {
@@ -835,29 +835,16 @@ async function runAnsiblePlaybook(reqData: any, playBookName: string) {
     return await myPromise;
 }
 
-// Restart-Host post
-app.post("/hosts/restart-host", async (req: any, res) => {
+// Run Ansible Playbook on Host post
+app.post("/hosts/runbook-host", async (req: any, res) => {
     try {
         let tempData = JSON.parse(getDecryptedData(req.body.data));
         let tempbookName = req.body.bookName;
-        res.send(await runAnsiblePlaybook(tempData, tempbookName));
+        res.send({ data: getEncryptedData(await runAnsiblePlaybook(tempData, tempbookName)) });
     } catch (e) {
         console.log(e);
         res.status(500);
-        res.send({ message: e.message });
-    }
-});
-
-// ShutDown-Host post
-app.post("/hosts/shutdown-host", async (req: any, res) => {
-    try {
-        let tempData = JSON.parse(getDecryptedData(req.body.data));
-        let tempbookName = req.body.bookName;
-        res.send(await runAnsiblePlaybook(tempData, tempbookName));
-    } catch (e) {
-        console.log(e);
-        res.status(500);
-        res.send({ message: e.message });
+        res.send({ data: getEncryptedData(e.message) });
     }
 });
 
