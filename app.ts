@@ -820,6 +820,7 @@ async function runAnsiblePlaybook(reqData: any, playBookName: string) {
                 let promise = playbook.exec();
                 promise.then(
                     function (successResult: any) {
+                        console.log(successResult);
                         resolve(successResult);
                         fs.rmSync(runningJobPath, { recursive: true, force: true });
                     },
