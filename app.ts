@@ -7,7 +7,9 @@ import moment from 'moment';
 import * as http from 'http';
 import * as https from 'https';
 import { Client } from 'ssh2';
-
+import Ansible from 'node-ansible';
+import fs from 'fs';
+import path from "path";
 import { exec } from 'child_process';
 
 process.on('unhandledRejection', (error: Error, promise) => {
@@ -777,6 +779,78 @@ async function speedTest() {
 }
 setInterval(speedTest, 60000 * 5);
 speedTest();
+
+async function runAnsiblePlaybook(reqData: any, playBookName: string) {
+    let myPromise = new Promise((resolve, reject) => {
+        try {
+            if (!fs.existsSync("./running-playbooks")) {
+                fs.mkdirSync("./running-playbooks");
+            }
+            let playbookPath = `./playbooks/${playBookName}`;
+            let baseName = path.basename(playbookPath);
+            let runningJobPath = `./running-playbooks/${baseName}`;
+            fs.cp(playbookPath, runningJobPath, { recursive: true }, (error) => {
+                if (error) {
+                    console.error(error);
+                }
+            });
+            let fileName = ["inventory.txt", "playbook.yml"];
+            const replaceStrings = () => {
+                fileName.forEach((element) => {
+                    let filePath = path.join(runningJobPath, element);
+                    switch (element) {
+                        case "inventory.txt":
+                            let replaceHostDetails = `${reqData.hostName} ansible_host=${reqData.ipAddress} ansible_user=${reqData.userName} ansible_ssh_pass=${reqData.userPass} ansible_sudo_pass=${reqData.userPass}`;
+                            fs.writeFileSync(filePath, replaceHostDetails, "utf-8");
+                            break;
+
+                        case "playbook.yml":
+                            let oldData = fs.readFileSync(filePath, "utf-8");
+                            let newData = oldData.replace("Host-Name", reqData.hostName);
+                            fs.writeFileSync(filePath, newData, "utf-8");
+                            break;
+
+                        default:
+                            break;
+                    }
+                });
+            };
+            setTimeout(() => {
+                replaceStrings();
+                let playbook = new Ansible.Playbook()
+                    .playbook(`${runningJobPath}/playbook`)
+                    .inventory(`${runningJobPath}/inventory.txt`);
+                let promise = playbook.exec();
+                promise.then(
+                    function (successResult: any) {
+                        console.log(successResult);
+                        resolve(successResult);
+                        fs.rmSync(runningJobPath, { recursive: true, force: true });
+                    },
+                    function (error: any) {
+                        reject(error);
+                    }
+                );
+            }, 1000);
+        } catch (error) {
+            reject(error);
+        }
+    });
+    return await myPromise;
+}
+
+// Run Ansible Playbook on Host post
+app.post("/hosts/runbook-host", async (req: any, res) => {
+    try {
+        let tempData = JSON.parse(getDecryptedData(req.body.data));
+        let tempbookName = req.body.bookName;
+        res.send({ data: getEncryptedData(await runAnsiblePlaybook(tempData, tempbookName)) });
+    } catch (e) {
+        console.log(e);
+        res.status(500);
+        res.send({ data: getEncryptedData(e.message) });
+    }
+});
 
 module.exports = app;
 function resolve(servicesPromiseArr: Promise<any>[]) {

@@ -1,0 +1,5 @@
+# Shutdown System #
+## System will shutdown... ##
+- name: Host System Will Shutdown...
+  community.general.shutdown:
+  become: yes
