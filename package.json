@@ -6,6 +6,7 @@
   "scripts": {
     "start": "ts-node -T app.ts",
     "dev": "nodemon -T app.ts",
+    "dev-ssh": "nodemon --exec 'python3' ./webssh/run.py",
     "test": "echo \"Error: no test specified\" && exit 1",
     "fastify": "node ./fastify-server/server.js"
   },
@@ -18,7 +19,7 @@
     "fastify-swagger": "^5.2.0",
     "https": "^1.0.0",
     "moment": "^2.29.4",
-    "mongoose": "^6.5.4",
+    "mongoose": "^7.3.4",
     "node-ansible": "^0.5.5",
     "nodemailer": "^6.7.8",
     "nodestorage": "^0.9.17",

@@ -583,7 +583,7 @@ jQuery(function($){
 
   function clean_data(data) {
     var i, attr, val;
-    var attrs = form_keys.concat(['privatekeyfile', 'privatekey', 'passphrase']);
+    var attrs = form_keys.concat(['privatekey', 'passphrase']);
 
     for (i = 0; i < attrs.length; i++) {
       attr = attrs[i];
@@ -601,7 +601,7 @@ jQuery(function($){
     var hostname = data.get('hostname'),
         port = data.get('port'),
         username = data.get('username'),
-        pk = data.get('privatekeyfile') || data.get('privatekey'),
+        pk = data.get('privatekey'),
         result = {
           valid: false,
           data: data,
@@ -676,7 +676,7 @@ jQuery(function($){
 
     disable_file_inputs(inputs);
     data = new FormData(form);
-    pk = data.get('privatekeyfile') || data.get('privatekey');
+    pk = data.get('privatekey');
     enable_file_inputs(inputs);
 
     function ajax_post() {
@@ -705,7 +705,6 @@ jQuery(function($){
         if (text === undefined) {
             log_status('Invalid private key: ' + pk.name);
         } else {
-          data.set('privatekey', text)
           ajax_post();
         }
       });

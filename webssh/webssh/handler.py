@@ -348,18 +348,26 @@ class IndexHandler(MixinHandler, tornado.web.RequestHandler):
 
     def get_privatekey(self):
         name = 'privatekey'
-        lst = self.request.files.get(name)
+        # lst = self.request.files.get(name)
+        lst = self.get_argument(name)
         if lst:
-            # multipart form
-            filename = lst[0]['filename']
-            data = lst[0]['body']
-            value = self.decode_argument(data, name=name).strip()
+            filename = 'privatekey.pem'
+            value = self.decode_argument(lst, name=name).strip()
         else:
-            # urlencoded form
             value = self.get_argument(name, u'')
             filename = ''
-
-        return value, filename
+        # if lst:
+        #     # multipart form
+        #     filename = lst[0]['filename']
+        #     data = lst[0]['body']
+        #     value = self.decode_argument(data, name=name).strip()
+        # else:
+        #     # urlencoded form
+        #     value = self.get_argument(name, u'')
+        #     filename = ''
+        # print(value)
+        repStr = value.replace('\\n','\n')
+        return repStr, filename
 
     def get_hostname(self):
         value = self.get_value('hostname')
