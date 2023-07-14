@@ -186,7 +186,10 @@ class PrivateKey(object):
 class MixinHandler(object):
 
     custom_headers = {
-        'Server': 'TornadoServer'
+        'Server': 'TornadoServer',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': '*',
+        'Access-Control-Allow-Methods': '*'
     }
 
     html = ('<html><head><title>{code} {reason}</title></head><body>{code} '
@@ -215,26 +218,27 @@ class MixinHandler(object):
             self.context = context
 
     def check_origin(self, origin):
-        if self.origin_policy == '*':
-            return True
+        # if self.origin_policy == '*':
+        #     return True
 
-        parsed_origin = urlparse(origin)
-        netloc = parsed_origin.netloc.lower()
-        logging.debug('netloc: {}'.format(netloc))
+        # parsed_origin = urlparse(origin)
+        # netloc = parsed_origin.netloc.lower()
+        # logging.debug('netloc: {}'.format(netloc))
 
-        host = self.request.headers.get('Host')
-        logging.debug('host: {}'.format(host))
+        # host = self.request.headers.get('Host')
+        # logging.debug('host: {}'.format(host))
 
-        if netloc == host:
-            return True
+        # if netloc == host:
+        #     return True
 
-        if self.origin_policy == 'same':
-            return False
-        elif self.origin_policy == 'primary':
-            return is_same_primary_domain(netloc.rsplit(':', 1)[0],
-                                          host.rsplit(':', 1)[0])
-        else:
-            return origin in self.origin_policy
+        # if self.origin_policy == 'same':
+        #     return False
+        # elif self.origin_policy == 'primary':
+        #     return is_same_primary_domain(netloc.rsplit(':', 1)[0],
+        #                                   host.rsplit(':', 1)[0])
+        # else:
+        #     return origin in self.origin_policy
+        return True
 
     def is_forbidden(self, context, hostname):
         ip = context.address[0]
@@ -484,10 +488,10 @@ class IndexHandler(MixinHandler, tornado.web.RequestHandler):
         origin = event_origin or header_origin
 
         if origin:
-            if not super(IndexHandler, self).check_origin(origin):
-                raise tornado.web.HTTPError(
-                    403, 'Cross origin operation is not allowed.'
-                )
+            # if not super(IndexHandler, self).check_origin(origin):
+            #     raise tornado.web.HTTPError(
+            #         403, 'Cross origin operation is not allowed.'
+            #     )
 
             if not event_origin and self.origin_policy != 'same':
                 self.set_header('Access-Control-Allow-Origin', origin)
