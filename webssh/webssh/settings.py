@@ -35,7 +35,7 @@ define('redirect', type=bool, default=True, help='Redirecting http to https')
 define('fbidhttp', type=bool, default=True,
        help='Forbid public plain http incoming requests')
 define('xheaders', type=bool, default=True, help='Support xheaders')
-define('xsrf', type=bool, default=True, help='CSRF protection')
+# define('xsrf', type=bool, default=True, help='CSRF protection')
 define('origin', default='same', help='''Origin policy,
 'same': same origin policy, matches host name and port number;
 'primary': primary domain policy, matches primary domain only;
@@ -79,7 +79,7 @@ def get_app_settings(options):
         static_path=os.path.join(base_dir, 'webssh', 'static'),
         websocket_ping_interval=options.wpintvl,
         debug=options.debug,
-        xsrf_cookies=options.xsrf,
+        # xsrf_cookies=options.xsrf,
         font=Font(
             get_font_filename(options.font,
                               os.path.join(base_dir, *font_dirs)),

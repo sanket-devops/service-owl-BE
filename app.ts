@@ -254,7 +254,7 @@ app.get('/', (req, res) => {
 app.get('/hosts', async (req, res) => {
     try {
         // let hosts = await owlModel.serviceHost.find({}).sort({_id:-1});
-        let hosts = await owlModel.serviceHost.find({}).select('ipAddress hostName port hostMetrics.DiskFree hostMetrics.MemFree hostMetrics.CpuUsage linkTo userName userPass groupName clusterName envName vmName note status hostCheck metricsCheck createdAt updatedAt').sort({_id:-1});
+        let hosts = await owlModel.serviceHost.find({}).select('ipAddress hostName sshPort port hostMetrics.DiskFree hostMetrics.MemFree hostMetrics.CpuUsage linkTo userName userPass privateKey groupName clusterName envName vmName note status hostCheck metricsCheck createdAt updatedAt').sort({_id:-1});
         res.send({data: getEncryptedData(hosts)});
     } catch (e) {
         res.status(500);
