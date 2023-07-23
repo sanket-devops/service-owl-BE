@@ -1,0 +1,6 @@
+# Reboot System #
+## System Rebooting... ##
+- name: Host Machine Rebooting...
+  reboot:
+    test_command: uptime
+  become: yes

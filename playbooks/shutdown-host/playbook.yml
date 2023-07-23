@@ -1,0 +1,8 @@
+---
+- name: Host Shutdown
+  hosts: Host-Name
+  become: yes
+  become_method: sudo
+  gather_facts: no
+  roles:
+    - role1
