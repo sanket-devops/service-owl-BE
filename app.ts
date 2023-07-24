@@ -619,8 +619,8 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
         MemFree: "cat /proc/meminfo | grep MemFree | awk '{ print $2}'",
         CpuUsage: "top -bn2|grep '%Cpu'|tail -1|grep -P '(....|...) id,'|awk '{print 100-$8}'",
         CPU: "lscpu | grep 'CPU(s):' | awk 'FNR == 1 {print $2}'",
-        downloadRx: `ip -s link show dev "$(route | grep default | awk '{print $8}')" | awk 'FNR == 4 {print $1}'`,
-        uploadTx: `ip -s link show dev "$(route | grep default | awk '{print $8}')" | awk 'FNR == 6 {print $1}'`,
+        downloadRx: `ip -s link show dev "$(route | grep default | awk '{print $8}')" | awk 'FNR == 4 {print $2}'`,
+        uploadTx: `ip -s link show dev "$(route | grep default | awk '{print $8}')" | awk 'FNR == 6 {print $2}'`,
         uptime: "uptime -p | awk '{ print $2,$3,$4,$5 }'"
     }
     let count = metricsArr.length - 1;
