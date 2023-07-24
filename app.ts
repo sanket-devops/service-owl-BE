@@ -794,13 +794,21 @@ async function runAnsiblePlaybook(reqData: any, playBookName: string) {
                     console.error(error);
                 }
             });
+
             let fileName = ["inventory.txt", "playbook.yml"];
             const replaceStrings = () => {
                 fileName.forEach((element) => {
                     let filePath = path.join(runningJobPath, element);
                     switch (element) {
                         case "inventory.txt":
-                            let replaceHostDetails = `${reqData.hostName} ansible_host=${reqData.ipAddress} ansible_user=${reqData.userName} ansible_ssh_pass=${reqData.userPass} ansible_sudo_pass=${reqData.userPass}`;
+                            if (reqData.userPass) {
+                                let replaceHostDetails = `${reqData.hostName} ansible_host=${reqData.ipAddress} ansible_user=${reqData.userName} ansible_ssh_pass=${reqData.userPass} ansible_sudo_pass=${reqData.userPass}`;
+                                fs.writeFileSync(filePath, replaceHostDetails, "utf-8");
+                                break;
+                            }
+                            let privateKeyPath = path.join(runningJobPath, "id_rsa");
+                            fs.writeFileSync(privateKeyPath, reqData.privateKey,{ mode: 0o600 });
+                            let replaceHostDetails = `${reqData.hostName} ansible_host=${reqData.ipAddress} ansible_user=${reqData.userName} ansible_ssh_private_key_file=${privateKeyPath} ansible_sudo_pass=${reqData.userPass}`;
                             fs.writeFileSync(filePath, replaceHostDetails, "utf-8");
                             break;
 
@@ -828,6 +836,7 @@ async function runAnsiblePlaybook(reqData: any, playBookName: string) {
                         fs.rmSync(runningJobPath, { recursive: true, force: true });
                     },
                     function (error: any) {
+                        fs.rmSync(runningJobPath, { recursive: true, force: true });
                         reject(error);
                     }
                 );
@@ -848,7 +857,7 @@ app.post("/hosts/runbook-host", async (req: any, res) => {
     } catch (e) {
         console.log(e);
         res.status(500);
-        res.send({ data: getEncryptedData(e.message) });
+        res.send({ data: e.message });
     }
 });
 
