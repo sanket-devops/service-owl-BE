@@ -104,12 +104,15 @@ const allServiceHost = async () => {
                                 "diskStatus": [],
                                 "memStatus": [],
                                 "cpuStatus": [],
+                                "networkStatus": [],
                                 "DiskTotal": "0",
                                 "DiskUsage": "0",
                                 "DiskFree": "0",
                                 "MemTotal": "0",
                                 "MemUsage": "0",
                                 "MemFree": "0",
+                                "downloadRx": "0",
+                                "uploadTx": "0",
                                 "CpuTotal": "0",
                                 "CpuUsage": "0",
                                 "CpuFree": "0",
@@ -137,16 +140,24 @@ const allServiceHost = async () => {
                                     item.hostMetrics[0].cpuStatus.splice(0, 1);
                                 }
                             }
+                            for (let arrayItem = 0; arrayItem < item.hostMetrics[0].networkStatus.length; arrayItem++) {
+                                if (item.hostMetrics[0].networkStatus.length >= (keepMetrics)) {
+                                    item.hostMetrics[0].networkStatus.splice(0, 1);
+                                }
+                            }
     
                             item.hostMetrics[0].diskStatus.push(resHostMetrics.diskStatus);
                             item.hostMetrics[0].memStatus.push(resHostMetrics.memStatus);
                             item.hostMetrics[0].cpuStatus.push(resHostMetrics.cpuStatus);
+                            item.hostMetrics[0].networkStatus.push(resHostMetrics.networkStatus);
                             item.hostMetrics[0].DiskTotal = resHostMetrics.DiskTotal;
                             item.hostMetrics[0].DiskUsage = resHostMetrics.DiskUsage;
                             item.hostMetrics[0].DiskFree = resHostMetrics.DiskFree;
                             item.hostMetrics[0].MemTotal = resHostMetrics.MemTotal;
                             item.hostMetrics[0].MemUsage = resHostMetrics.MemUsage;
                             item.hostMetrics[0].MemFree = resHostMetrics.MemFree;
+                            item.hostMetrics[0].downloadRx = resHostMetrics.downloadRx;
+                            item.hostMetrics[0].uploadTx = resHostMetrics.uploadTx;
                             item.hostMetrics[0].CpuTotal = resHostMetrics.CpuTotal;
                             item.hostMetrics[0].CpuUsage = resHostMetrics.CpuUsage;
                             item.hostMetrics[0].CpuFree = resHostMetrics.CpuFree;
@@ -270,6 +281,7 @@ app.get('/hosts/hostMetrics/:postId', async (req: any, res) => {
                 "diskStatus": [['Timestamp', 'Disk Total', 'Disk Usage', 'Disk Free'], [0, 0, 0, 0]],
                 "memStatus": [['Timestamp', 'Mem Total', 'Mem Usage', 'Mem Available'], [0, 0, 0, 0]],
                 "cpuStatus": [['Timestamp', 'CPU Total', 'CPU Usage', 'CPU Free'], [0, 0, 0, 0]],
+                "networkStatus": [['Timestamp', 'CPU Total', 'CPU Usage', 'CPU Free'], [0, 0, 0, 0]],
                 "DiskTotal": 0,
                 "DiskUsage": 0,
                 "DiskFree": 0,
@@ -599,7 +611,7 @@ function toIsoString(date: any) {
 
 async function sshHostMetrics(host: string, port: number, username: string, password: string) {
 
-    let metricsArr: string[] = ["DiskTotal", "DiskFree", "MemTotal", "MemFree", "CpuUsage", "CPU", "uptime"];
+    let metricsArr: string[] = ["DiskTotal", "DiskFree", "MemTotal", "MemFree", "CpuUsage", "CPU", "downloadRx", "uploadTx", "uptime"];
     let metricsCom: any = {
         DiskTotal: "df / | grep / | awk '{ print $2}'",
         DiskFree: "df / | grep / | awk '{ print $4}'",
@@ -607,6 +619,8 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
         MemFree: "cat /proc/meminfo | grep MemFree | awk '{ print $2}'",
         CpuUsage: "top -bn2|grep '%Cpu'|tail -1|grep -P '(....|...) id,'|awk '{print 100-$8}'",
         CPU: "lscpu | grep 'CPU(s):' | awk 'FNR == 1 {print $2}'",
+        downloadRx: `ip -s link show dev "$(route | grep default | awk '{print $8}')" | awk 'FNR == 4 {print $1}'`,
+        uploadTx: `ip -s link show dev "$(route | grep default | awk '{print $8}')" | awk 'FNR == 6 {print $1}'`,
         uptime: "uptime -p | awk '{ print $2,$3,$4,$5 }'"
     }
     let count = metricsArr.length - 1;
@@ -639,6 +653,8 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                                     let MemTotal = ((resData.MemTotal / 1024) / 1024).toFixed(1);
                                     let MemFree = ((resData.MemFree / 1024) / 1024).toFixed(1);
                                     let MemUsage = (+MemTotal - +MemFree).toFixed(1);
+                                    let downloadRx = ((resData.downloadRx / 1024) / 1024).toFixed(1);
+                                    let uploadTx = ((resData.uploadTx / 1024) / 1024).toFixed(1);
                                     let CpuTotal = 100;
                                     let CpuUsage = resData.CpuUsage;
                                     let CpuFree = (CpuTotal - +CpuUsage).toFixed(1);
@@ -649,21 +665,23 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                                         "diskStatus": [createdAt, +DiskTotal, +DiskUsage, +DiskFree],
                                         "memStatus": [createdAt, +MemTotal, +MemUsage, +MemFree],
                                         "cpuStatus": [createdAt, CpuTotal, +CpuUsage, +CpuFree],
+                                        "networkStatus": [createdAt, +downloadRx, +uploadTx],
                                         "DiskTotal": (+DiskTotal).toFixed(0),
                                         "DiskUsage": (+DiskUsage).toFixed(0),
                                         "DiskFree": (+DiskFree).toFixed(0),
                                         "MemTotal": (+MemTotal).toFixed(1),
                                         "MemUsage": (+MemUsage).toFixed(1),
                                         "MemFree": (+MemFree).toFixed(1),
+                                        "downloadRx": (+downloadRx).toFixed(1),
+                                        "uploadTx": (+uploadTx).toFixed(1),
                                         "CpuTotal": (+CpuTotal).toFixed(0),
                                         "CpuUsage": (+CpuUsage).toFixed(0),
                                         "CpuFree": (+CpuFree).toFixed(0),
                                         "CPU": CPU,
                                         "uptime": uptime
                                     };
-
                                 }
-                            }).on('data', async (data) => {
+                            }).on('data', async (data: any) => {
                                 let output = await JSON.parse(JSON.stringify('' + data));
                                 // resData[k] = await output.replace(/(\r\n|\n|\r)/gm, "");
                                 resData[k] = await output.replace(/\n/g, '');
@@ -676,12 +694,15 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                             "diskStatus": [createdAt, 0, 0, 0],
                             "memStatus": [createdAt, 0, 0, 0],
                             "cpuStatus": [createdAt, 0, 0, 0],
+                            "networkStatus": [createdAt, 0, 0],
                             "DiskTotal": "0",
                             "DiskUsage": "0",
                             "DiskFree": "0",
                             "MemTotal": "0",
                             "MemUsage": "0",
                             "MemFree": "0",
+                            "downloadRx": "0",
+                            "uploadTx": "0",
                             "CpuTotal": "0",
                             "CpuUsage": "0",
                             "CpuFree": "0",
@@ -704,7 +725,7 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
             break;
         }
     }
-    // console.log(await hostMetrics);
+    // console.log(hostMetrics);
     return hostMetrics;
 }
 
