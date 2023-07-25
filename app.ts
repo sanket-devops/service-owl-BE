@@ -81,95 +81,6 @@ const allServiceHost = async () => {
 
                 let downCount = 0;
                 let portsPromiseArr: Promise<any>[] = [];
-                let hostMetricsPromiseArr: Promise<any>[] = [];
-                if (item.metricsCheck) {
-                    if (item._id && item.userName && item.userPass) {
-                        hostMetricsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
-    
-                            let host = item.ipAddress;
-                            let port = 22;
-                            let username = item.userName;
-                            let password = item.userPass;
-    
-                            // let keepMetrics = 288 //24H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
-                            // let keepMetrics = 576 //48H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
-                            let keepMetrics = 2016 //7 days (1 week) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
-                            // let keepMetrics = 8640 //30 days (1 Month) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
-                            // let keepMetrics = 25920 //90 days (3 Months) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
-    
-                            let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
-                            // console.log(resHostMetrics);
-
-                            let hostMetrics: IhostMetrics[] = [{
-                                "diskStatus": [],
-                                "memStatus": [],
-                                "cpuStatus": [],
-                                "networkStatus": [],
-                                "DiskTotal": "0",
-                                "DiskUsage": "0",
-                                "DiskFree": "0",
-                                "MemTotal": "0",
-                                "MemUsage": "0",
-                                "MemFree": "0",
-                                "downloadRx": "0",
-                                "uploadTx": "0",
-                                "CpuTotal": "0",
-                                "CpuUsage": "0",
-                                "CpuFree": "0",
-                                "CPU": "0",
-                                "uptime": "Start to get up time."
-                            }];
-                            if (item.hostMetrics && item.hostMetrics.length === 0) {
-                                item.hostMetrics.push(hostMetrics[0]);
-                            } else {
-                                item.hostMetrics = item.hostMetrics || hostMetrics
-                            }
-                            // Keep Array size fix and remove fist item
-                            for (let arrayItem = 0; arrayItem < item.hostMetrics[0].diskStatus.length; arrayItem++) {
-                                if (item.hostMetrics[0].diskStatus.length >= (keepMetrics)) {
-                                    item.hostMetrics[0].diskStatus.splice(0, 1);
-                                }
-                            }
-                            for (let arrayItem = 0; arrayItem < item.hostMetrics[0].memStatus.length; arrayItem++) {
-                                if (item.hostMetrics[0].memStatus.length >= (keepMetrics)) {
-                                    item.hostMetrics[0].memStatus.splice(0, 1);
-                                }
-                            }
-                            for (let arrayItem = 0; arrayItem < item.hostMetrics[0].cpuStatus.length; arrayItem++) {
-                                if (item.hostMetrics[0].cpuStatus.length >= (keepMetrics)) {
-                                    item.hostMetrics[0].cpuStatus.splice(0, 1);
-                                }
-                            }
-                            for (let arrayItem = 0; arrayItem < item.hostMetrics[0].networkStatus.length; arrayItem++) {
-                                if (item.hostMetrics[0].networkStatus.length >= (keepMetrics)) {
-                                    item.hostMetrics[0].networkStatus.splice(0, 1);
-                                }
-                            }
-    
-                            item.hostMetrics[0].diskStatus.push(resHostMetrics.diskStatus);
-                            item.hostMetrics[0].memStatus.push(resHostMetrics.memStatus);
-                            item.hostMetrics[0].cpuStatus.push(resHostMetrics.cpuStatus);
-                            item.hostMetrics[0].networkStatus.push(resHostMetrics.networkStatus);
-                            item.hostMetrics[0].DiskTotal = resHostMetrics.DiskTotal;
-                            item.hostMetrics[0].DiskUsage = resHostMetrics.DiskUsage;
-                            item.hostMetrics[0].DiskFree = resHostMetrics.DiskFree;
-                            item.hostMetrics[0].MemTotal = resHostMetrics.MemTotal;
-                            item.hostMetrics[0].MemUsage = resHostMetrics.MemUsage;
-                            item.hostMetrics[0].MemFree = resHostMetrics.MemFree;
-                            item.hostMetrics[0].downloadRx = resHostMetrics.downloadRx;
-                            item.hostMetrics[0].uploadTx = resHostMetrics.uploadTx;
-                            item.hostMetrics[0].CpuTotal = resHostMetrics.CpuTotal;
-                            item.hostMetrics[0].CpuUsage = resHostMetrics.CpuUsage;
-                            item.hostMetrics[0].CpuFree = resHostMetrics.CpuFree;
-                            item.hostMetrics[0].CPU = resHostMetrics.CPU;
-                            item.hostMetrics[0].uptime = resHostMetrics.uptime;
-                            let metricsData = item.hostMetrics
-                            await owlModel.serviceHost.findOneAndUpdate({_id: item._id}, {$set: {hostMetrics: metricsData}}).exec();
-                            // console.log(metricsData);
-                            resolve();
-                        }));
-                    }
-                }
                 for (let i = 0; i < item.port.length; i++) {
                     portsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
                         let portObj = item.port[i];
@@ -253,10 +164,120 @@ const allServiceHost = async () => {
     isOwlChekcing = false;
     console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Stop =>`, counter++,`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
 }
-// setTimeout(allServiceHost(), 10000);
+
 setInterval(allServiceHost, 60000 * 5);
 allServiceHost();
 
+let metricsCounter = 1;
+const allMetricsHost = async () => {
+    console.log(`++++++++++++++++++++++++++++++++++++++++++++++++++ Start =>`, metricsCounter,`++++++++++++++++++++++++++++++++++++++++++++++++++`);
+    
+    let startDate = new Date().getTime();
+    let allData: Idashboard[] = <any>await owlModel.serviceHost.find({}).select('ipAddress userName userPass hostName port hostMetrics hostCheck metricsCheck').lean().exec();
+    allData = JSON.parse(JSON.stringify(allData));
+    let metricsPromiseArr: Promise<any>[] = [];
+
+    for (let item of allData) {
+        let hostMetricsPromiseArr: Promise<any>[] = [];
+        if (item.metricsCheck) {
+            if (item._id && item.userName && item.userPass) {
+                hostMetricsPromiseArr.push(new Promise<void>(async (resolve, reject) => {
+
+                    let host = item.ipAddress;
+                    let port = 22;
+                    let username = item.userName;
+                    let password = item.userPass;
+
+                    // let keepMetrics = 288 //24H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                    // let keepMetrics = 576 //48H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                    let keepMetrics = 2016 //7 days (1 week) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                    // let keepMetrics = 8640 //30 days (1 Month) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                    // let keepMetrics = 25920 //90 days (3 Months) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+
+                    let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
+                    // console.log(resHostMetrics);
+
+                    let hostMetrics: IhostMetrics[] = [{
+                        "diskStatus": [],
+                        "memStatus": [],
+                        "cpuStatus": [],
+                        "networkStatus": [],
+                        "DiskTotal": "0",
+                        "DiskUsage": "0",
+                        "DiskFree": "0",
+                        "MemTotal": "0",
+                        "MemUsage": "0",
+                        "MemFree": "0",
+                        "downloadRx": "0",
+                        "uploadTx": "0",
+                        "CpuTotal": "0",
+                        "CpuUsage": "0",
+                        "CpuFree": "0",
+                        "CPU": "0",
+                        "uptime": "Start to get up time."
+                    }];
+                    if (item.hostMetrics && item.hostMetrics.length === 0) {
+                        item.hostMetrics.push(hostMetrics[0]);
+                    } else {
+                        item.hostMetrics = item.hostMetrics || hostMetrics
+                    }
+                    // Keep Array size fix and remove fist item
+                    for (let arrayItem = 0; arrayItem < item.hostMetrics[0].diskStatus.length; arrayItem++) {
+                        if (item.hostMetrics[0].diskStatus.length >= (keepMetrics)) {
+                            item.hostMetrics[0].diskStatus.splice(0, 1);
+                        }
+                    }
+                    for (let arrayItem = 0; arrayItem < item.hostMetrics[0].memStatus.length; arrayItem++) {
+                        if (item.hostMetrics[0].memStatus.length >= (keepMetrics)) {
+                            item.hostMetrics[0].memStatus.splice(0, 1);
+                        }
+                    }
+                    for (let arrayItem = 0; arrayItem < item.hostMetrics[0].cpuStatus.length; arrayItem++) {
+                        if (item.hostMetrics[0].cpuStatus.length >= (keepMetrics)) {
+                            item.hostMetrics[0].cpuStatus.splice(0, 1);
+                        }
+                    }
+                    for (let arrayItem = 0; arrayItem < item.hostMetrics[0].networkStatus.length; arrayItem++) {
+                        if (item.hostMetrics[0].networkStatus.length >= (keepMetrics)) {
+                            item.hostMetrics[0].networkStatus.splice(0, 1);
+                        }
+                    }
+
+                    item.hostMetrics[0].diskStatus.push(resHostMetrics.diskStatus);
+                    item.hostMetrics[0].memStatus.push(resHostMetrics.memStatus);
+                    item.hostMetrics[0].cpuStatus.push(resHostMetrics.cpuStatus);
+                    item.hostMetrics[0].networkStatus.push(resHostMetrics.networkStatus);
+                    item.hostMetrics[0].DiskTotal = resHostMetrics.DiskTotal;
+                    item.hostMetrics[0].DiskUsage = resHostMetrics.DiskUsage;
+                    item.hostMetrics[0].DiskFree = resHostMetrics.DiskFree;
+                    item.hostMetrics[0].MemTotal = resHostMetrics.MemTotal;
+                    item.hostMetrics[0].MemUsage = resHostMetrics.MemUsage;
+                    item.hostMetrics[0].MemFree = resHostMetrics.MemFree;
+                    item.hostMetrics[0].downloadRx = resHostMetrics.downloadRx;
+                    item.hostMetrics[0].uploadTx = resHostMetrics.uploadTx;
+                    item.hostMetrics[0].CpuTotal = resHostMetrics.CpuTotal;
+                    item.hostMetrics[0].CpuUsage = resHostMetrics.CpuUsage;
+                    item.hostMetrics[0].CpuFree = resHostMetrics.CpuFree;
+                    item.hostMetrics[0].CPU = resHostMetrics.CPU;
+                    item.hostMetrics[0].uptime = resHostMetrics.uptime;
+                    let metricsData = item.hostMetrics
+                    await owlModel.serviceHost.findOneAndUpdate({_id: item._id}, {$set: {hostMetrics: metricsData}}).exec();
+                    // console.log(metricsData);
+                    resolve();
+                }));
+            }
+        }
+    }
+    await Promise.all(metricsPromiseArr);
+
+    let endDate = new Date().getTime();
+    console.log(`${moment().format('DD-MM-YYYY hh:mm:ss A Z')} : Data Refreshed in ${(endDate - startDate) / 1000}`);
+    console.log(`++++++++++++++++++++++++++++++++++++++++++++++++++ Stop =>`, metricsCounter++,`++++++++++++++++++++++++++++++++++++++++++++++++++`);
+
+}
+
+setInterval(allMetricsHost, 60000 * 1);
+allMetricsHost();
 
 app.get('/', (req, res) => {
     res.send(`Service-Owl is up and running...`);
@@ -629,8 +650,8 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
         MemFree: "cat /proc/meminfo | grep MemFree | awk '{ print $2}'",
         CpuUsage: "top -bn2|grep '%Cpu'|tail -1|grep -P '(....|...) id,'|awk '{print 100-$8}'",
         CPU: "lscpu | grep 'CPU(s):' | awk 'FNR == 1 {print $2}'",
-        downloadRx: `cd /sys/class/net/"$(route | grep default | awk '{print $8}')"/statistics && old="$(<rx_bytes)" && sleep 1 && now="$(<rx_bytes)" && echo $((($now-$old)/1024/1024))`,
-        uploadTx: `cd /sys/class/net/"$(route | grep default | awk '{print $8}')"/statistics && old="$(<tx_bytes)" && sleep 1 && now="$(<tx_bytes)" && echo $((($now-$old)/1024/1024))`,
+        downloadRx: `INT=2; RXDIR=/sys/class/net/"$(route | grep default | awk '{print $8}')"/statistics/rx_bytes; RXSTART=$(cat $RXDIR); sleep $INT; RXEND=$(cat $RXDIR); RXBPS="$(((RXEND-RXSTART)/INT))"; echo "$RXBPS"`,
+        uploadTx: `INT=2; TXDIR=/sys/class/net/"$(route | grep default | awk '{print $8}')"/statistics/tx_bytes; TXSTART=$(cat $TXDIR); sleep $INT; TXEND=$(cat $TXDIR); TXBPS="$(((TXEND-TXSTART)/INT))"; echo "$TXBPS"`,
         uptime: "uptime -p | awk '{ print $2,$3,$4,$5 }'"
     }
     let count = metricsArr.length - 1;
@@ -662,8 +683,8 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                                     let MemTotal = ((resData.MemTotal / 1024) / 1024).toFixed(1);
                                     let MemFree = ((resData.MemFree / 1024) / 1024).toFixed(1);
                                     let MemUsage = (+MemTotal - +MemFree).toFixed(1);
-                                    let downloadRx = resData.downloadRx;
-                                    let uploadTx = resData.uploadTx;
+                                    let downloadRx = ((resData.downloadRx / 1024) / 1024).toFixed(1);
+                                    let uploadTx = ((resData.uploadTx / 1024) / 1024).toFixed(1);
                                     let CpuTotal = 100;
                                     let CpuUsage = resData.CpuUsage;
                                     let CpuFree = (CpuTotal - +CpuUsage).toFixed(1);
