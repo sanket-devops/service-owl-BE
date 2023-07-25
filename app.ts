@@ -190,9 +190,10 @@ const allMetricsHost = async () => {
 
                     // let keepMetrics = 288 //24H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
                     // let keepMetrics = 576 //48H // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
-                    let keepMetrics = 2016 //7 days (1 week) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                    // let keepMetrics = 2016 //7 days (1 week) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
                     // let keepMetrics = 8640 //30 days (1 Month) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
                     // let keepMetrics = 25920 //90 days (3 Months) // It will keep last Metrics record. Every 5 min new Metrics array added and old one is remove.
+                    let keepMetrics = 2880 //48H // It will keep last Metrics record. Every 1 min new Metrics array added and old one is remove.
 
                     let resHostMetrics: any = await sshHostMetrics(host, port, username, password);
                     // console.log(resHostMetrics);
