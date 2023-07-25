@@ -408,6 +408,16 @@ app.post('/hosts/host-delete', async (req: any, res) => {
     }
 });
 
+//delete hostMetrics data
+app.post('/hosts/hostMetrics-delete', async (req: any, res) => {
+    try {
+        let post = await owlModel.serviceHost.findByIdAndUpdate({_id: getDecryptedData(req.body.data)}, {$unset: {hostMetrics: ""}});
+        res.send(post);
+    } catch (e) {
+        res.status(500);
+    }
+});
+
 
 let localStorageData: Idashboard[];
 
@@ -619,8 +629,8 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
         MemFree: "cat /proc/meminfo | grep MemFree | awk '{ print $2}'",
         CpuUsage: "top -bn2|grep '%Cpu'|tail -1|grep -P '(....|...) id,'|awk '{print 100-$8}'",
         CPU: "lscpu | grep 'CPU(s):' | awk 'FNR == 1 {print $2}'",
-        downloadRx: `ip -s link show dev "$(route | grep default | awk '{print $8}')" | awk 'FNR == 4 {print $2}'`,
-        uploadTx: `ip -s link show dev "$(route | grep default | awk '{print $8}')" | awk 'FNR == 6 {print $2}'`,
+        downloadRx: `cd /sys/class/net/"$(route | grep default | awk '{print $8}')"/statistics && old="$(<rx_bytes)" && sleep 1 && now="$(<rx_bytes)" && echo $((($now-$old)/1024/1024))`,
+        uploadTx: `cd /sys/class/net/"$(route | grep default | awk '{print $8}')"/statistics && old="$(<tx_bytes)" && sleep 1 && now="$(<tx_bytes)" && echo $((($now-$old)/1024/1024))`,
         uptime: "uptime -p | awk '{ print $2,$3,$4,$5 }'"
     }
     let count = metricsArr.length - 1;
@@ -639,10 +649,9 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                 if (k in metricsCom) {
                     let conn = new Client();
                     conn.on('ready', async () => {
-                        conn.exec(`${metricsCom[k]}`, (err, stream) => {
+                        conn.exec(metricsCom[k], (err: any, stream: any) => {
                             if (err) throw err;
                             stream.on('close', () => {
-                                // console.log(resData);
                                 resolve();
                                 conn.end();
                                 if (count === metricsArr.indexOf(k)) {
@@ -653,8 +662,8 @@ async function sshHostMetrics(host: string, port: number, username: string, pass
                                     let MemTotal = ((resData.MemTotal / 1024) / 1024).toFixed(1);
                                     let MemFree = ((resData.MemFree / 1024) / 1024).toFixed(1);
                                     let MemUsage = (+MemTotal - +MemFree).toFixed(1);
-                                    let downloadRx = ((resData.downloadRx / 1024) / 1024).toFixed(1);
-                                    let uploadTx = ((resData.uploadTx / 1024) / 1024).toFixed(1);
+                                    let downloadRx = resData.downloadRx;
+                                    let uploadTx = resData.uploadTx;
                                     let CpuTotal = 100;
                                     let CpuUsage = resData.CpuUsage;
                                     let CpuFree = (CpuTotal - +CpuUsage).toFixed(1);
