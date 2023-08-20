@@ -49,12 +49,15 @@ export interface IhostMetrics {
   diskStatus: any[];
   memStatus: any[];
   cpuStatus: any[];
+  networkStatus: any[];
   DiskTotal: string;
   DiskUsage: string;
   DiskFree: string;
   MemTotal: string;
   MemUsage: string;
   MemFree: string;
+  downloadRx: string;
+  uploadTx: string;
   CpuTotal: string;
   CpuUsage: string;
   CpuFree: string;
