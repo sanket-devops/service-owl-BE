@@ -118,20 +118,25 @@ const allServiceHost = async () => {
                                     }
                                 }
                             } else {
-                                try {
-                                    isUp = await tcpPortUsed.check(portObj.port, item.ipAddress);
-                                    portObj.status = 'UP'
-                                } catch (error) {
-                                    try {
-                                        console.log(`Port Watching: '${item.ipAddress}' Port '${portObj.port}'.`);
-                                        await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 10000, 60000 * 4); // wait for 5 minute to
+                                await tcpPortUsed.check(portObj.port, item.ipAddress).then(async (isUp: any) => {
+                                    if (isUp) {
                                         portObj.status = 'UP'
-                                        console.log(`Port Checker: UP Found '${item.ipAddress}' Port '${portObj.port}'.`);
-                                    } catch (error) {
-                                        portObj.status = 'DOWN'
-                                        console.log(`Port Checker: DOWN Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                    } else {
+                                        console.log(`Port Watching: '${item.ipAddress}' Port '${portObj.port}'.`);
+                                        // wait for 5 minute to
+                                        await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 10000, 60000 * 4).then((isUp: any) => {
+                                            if (isUp) {
+                                                portObj.status = 'UP'
+                                                console.log(`Port Checker: UP Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                            }
+                                        }).catch((err: any) => {
+                                            portObj.status = 'DOWN'
+                                            console.log(`Port Checker: DOWN Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                        });
                                     }
-                                }
+                                }).catch((err: any) => {
+                                    console.log(err);
+                                });
                             }
                             if (portObj.status === 'UP') {
                                 upCount++;
