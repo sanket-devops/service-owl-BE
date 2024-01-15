@@ -135,7 +135,9 @@ const allServiceHost = async () => {
                                         });
                                     }
                                 }).catch((err: any) => {
-                                    console.log(err);
+                                    // console.log(err);
+                                    portObj.status = 'DOWN'
+                                    console.log(`Port Checker: DOWN Found '${item.ipAddress}' Port '${portObj.port}'.`);
                                 });
                             }
                             if (portObj.status === 'UP') {
