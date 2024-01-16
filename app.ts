@@ -67,7 +67,7 @@ function getDecryptedData(ciphertext: any) {
 let counter = 1;
 let isOwlChekcing: boolean;
 const allServiceHost = async () => {
-    console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Start =>`, counter,`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
+    console.log(`\x1b[32m<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Service Watch Start => ${counter} >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
     isOwlChekcing = true;
     let startDate = new Date().getTime();
     let allData: Idashboard[] = <any>await owlModel.serviceHost.find({}).select('ipAddress userName userPass hostName port hostMetrics hostCheck metricsCheck').lean().exec();
@@ -101,7 +101,7 @@ const allServiceHost = async () => {
                                 if (isHttpUp) {
                                     portObj.status = 'UP'
                                 } else {
-                                    console.log(`Http Watching: '${item.ipAddress}' Port '${portObj.port}'.`);
+                                    console.log(`Http Watching: '${item.ipAddress}' Port '${portObj.port}'`);
                                     for (let index = 0; index < 23; index++) {
                                         const __ret = await setHttpStatus(portObj, httpCheck, isHttpUp, item);
                                         isHttpUp = __ret.isHttpUp;
@@ -111,10 +111,10 @@ const allServiceHost = async () => {
                                     }
                                     if (isHttpUp) {
                                         portObj.status = 'UP'
-                                        console.log(`Http Checker: UP Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                        console.log(`Http Checker: UP Found '${item.ipAddress}' Port '${portObj.port}'`);
                                     } else {
                                         portObj.status = 'DOWN'
-                                        console.log(`Http Checker: DOWN Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                        console.log(`\x1b[31mHttp Checker: DOWN Found '${item.ipAddress}' Port '${portObj.port}'\x1b[0m`);
                                     }
                                 }
                             } else {
@@ -122,22 +122,31 @@ const allServiceHost = async () => {
                                     if (isUp) {
                                         portObj.status = 'UP'
                                     } else {
-                                        console.log(`Port Watching: '${item.ipAddress}' Port '${portObj.port}'.`);
+                                        console.log(`Port Watching: '${item.ipAddress}' Port '${portObj.port}'`);
                                         // wait for 5 minute to
                                         await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 10000, 60000 * 4).then((isUp: any) => {
                                             if (isUp) {
                                                 portObj.status = 'UP'
-                                                console.log(`Port Checker: UP Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                                console.log(`Port Checker: UP Found '${item.ipAddress}' Port '${portObj.port}'`);
                                             }
                                         }).catch((err: any) => {
                                             portObj.status = 'DOWN'
-                                            console.log(`Port Checker: DOWN Found '${item.ipAddress}' Port '${portObj.port}'.`);
+                                            console.log(`\x1b[31mPort Checker: DOWN Found '${item.ipAddress}' Port '${portObj.port}'\x1b[0m`);
                                         });
                                     }
-                                }).catch((err: any) => {
+                                }).catch(async (err: any) => {
+                                    console.log(`Port Checker Watching Error: '${item.ipAddress}' Port '${portObj.port}'`);
+                                    // wait for 5 minute to
+                                    await tcpPortUsed.waitUntilUsedOnHost(portObj.port, item.ipAddress, 10000, 60000 * 4).then((isUp: any) => {
+                                        if (isUp) {
+                                            portObj.status = 'UP'
+                                            console.log(`Port Checker Error: UP Found '${item.ipAddress}' Port '${portObj.port}'`);
+                                        }
+                                    }).catch((err: any) => {
+                                        portObj.status = 'DOWN'
+                                        console.log(`\x1b[31mPort Checker Error: DOWN Found '${item.ipAddress}' Port '${portObj.port}'\x1b[0m`);
+                                    });
                                     // console.log(err);
-                                    portObj.status = 'DOWN'
-                                    console.log(`Port Checker: DOWN Found '${item.ipAddress}' Port '${portObj.port}'.`);
                                 });
                             }
                             if (portObj.status === 'UP') {
@@ -147,7 +156,7 @@ const allServiceHost = async () => {
                             }
                         } catch (error) {
                             console.log(error)
-                        }
+                        }                        
                         resolve();
                     }));
                 }
@@ -160,7 +169,7 @@ const allServiceHost = async () => {
                 resolve();
             }));
         }else {
-            console.log(`Skip Host '${item.hostName}' '${item.ipAddress}' HostCheck is '${item.hostCheck}'.`);
+            console.log(`\x1b[33mSkip Host '${item.hostName}' '${item.ipAddress}' HostCheck is '${item.hostCheck}'\x1b[0m`);
         }
     }
     await Promise.all(servicesPromiseArr);
@@ -169,15 +178,15 @@ const allServiceHost = async () => {
     let endDate = new Date().getTime();
     console.log(`${moment().format('DD-MM-YYYY hh:mm:ss A Z')} : Data Refreshed in ${(endDate - startDate) / 1000}`);
     isOwlChekcing = false;
-    console.log(`<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Stop =>`, counter++,`>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
+    console.log(`\x1b[32m<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< Service Watch Stop => ${counter++} >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>`);
 }
 
-setInterval(allServiceHost, 60000 * 5);
+setInterval(allServiceHost, 60000 * 8);
 allServiceHost();
 
 let metricsCounter = 1;
 const allMetricsHost = async () => {
-    console.log(`++++++++++++++++++++++++++++++++++++++++++++++++++ Start =>`, metricsCounter,`++++++++++++++++++++++++++++++++++++++++++++++++++`);
+    console.log(`\x1b[36m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Metrics Watch Start => ${metricsCounter} ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\x1b[0m`);
     
     let startDate = new Date().getTime();
     let allData: Idashboard[] = <any>await owlModel.serviceHost.find({}).select('ipAddress userName userPass hostName port hostMetrics hostCheck metricsCheck').lean().exec();
@@ -280,11 +289,11 @@ const allMetricsHost = async () => {
 
     let endDate = new Date().getTime();
     console.log(`${moment().format('DD-MM-YYYY hh:mm:ss A Z')} : Data Refreshed in ${(endDate - startDate) / 1000}`);
-    console.log(`++++++++++++++++++++++++++++++++++++++++++++++++++ Stop =>`, metricsCounter++,`++++++++++++++++++++++++++++++++++++++++++++++++++`);
+    console.log(`\x1b[36m-------------------------------------------------- Metrics Watch Stop => ${metricsCounter++} --------------------------------------------------\x1b[0m`);
 
 }
 
-setInterval(allMetricsHost, 60000 * 1);
+setInterval(allMetricsHost, 60000 * 5);
 allMetricsHost();
 
 app.get('/', (req, res) => {
