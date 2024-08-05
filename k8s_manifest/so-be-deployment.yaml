@@ -21,3 +21,5 @@ spec:
           ports:
             - name: http-port
               containerPort: 8002
+            - name: ssh-port
+              containerPort: 8888
