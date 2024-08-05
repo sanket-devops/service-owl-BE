@@ -6,10 +6,16 @@ metadata:
     name: service-owl-be
 spec:
   ports:
-    - port: 8002
+    - name: http-port
+      port: 8002
       targetPort: http-port
       protocol: TCP
       nodePort: 30802
+    - name: ssh-port
+      port: 8888
+      targetPort: ssh-port
+      protocol: TCP
+      nodePort: 30888
   externalIPs:
     - 192.168.120.135
   selector:
